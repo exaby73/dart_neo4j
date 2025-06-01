@@ -1,0 +1,2810 @@
+---
+description: 
+globs: packages/dart_bolt/**/*.dart
+alwaysApply: false
+---
+This website uses cookies
+
+We use cookies to offer you a better browsing experience, analyze site traffic, personalize content and serve targeted ads.  Learn about how we use cookies and how you can control them in [Cookie Settings](https://neo4j.com/privacy-policy/cookies/). By using our site. you consent to our use of cookies.
+
+[Accept Cookies](javascript:void(0)) [Use necessary cookies only](javascript:void(0))
+
+[Skip to content](https://neo4j.com/docs/bolt/current/bolt/message/#skip-to-content "Skip to content")
+
+[Go to docs home page](https://neo4j.com/docs)
+
+[Raise an issue](https://github.com/neo4j-drivers/docs-bolt/issues/new/?title=Docs%20Feedback%20modules/ROOT/pages/bolt/message.adoc%20(ref:%20main)&body=%3E%20Do%20not%20include%20confidential%20information,%20personal%20data,%20sensitive%20data,%20or%20other%20regulated%20data.)
+
+# Bolt Protocol message specification
+
+The message specification describes the message exchanges that take place on a connection following a successful Bolt handshake.
+For details of establishing a connection and performing a handshake, see [Bolt Protocol handshake specification](https://neo4j.com/docs/bolt/current/bolt/handshake/).
+
+The Bolt protocol communicates with specific versioned messages.
+
+## Bolt Protocol server state specification
+
+For the server, each connection using the Bolt Protocol will occupy one of several states throughout its lifetime.
+This state is used to determine what actions may be undertaken by the client.
+
+For more information, see the corresponding version of the [Bolt Protocol server state specification](https://neo4j.com/docs/bolt/current/bolt/server-state/).
+
+### Server signals
+
+_Jump ahead_ means that the signal is immediately available before any messages are processed in the message queue.
+
+| Server signal | Jump ahead | Description |
+| --- | --- | --- |
+| `<INTERRUPT` > | X | an interrupt signal |
+| `<DISCONNECT>` |  | a disconnect signal |
+
+### Protocol errors
+
+If a server or client receives a message type that is unexpected, according to the transitions described in this document, it must treat that as a protocol error.
+Protocol errors are fatal and should immediately transition the server state to `DEFUNCT`, closing any open connections.
+
+### Session
+
+Each connection to the server creates a new **session** that lives until that connection is closed.
+Each session is isolated and the server keeps track of the current state, based on the requests and responses exchanged within that session.
+A session ends when the socket for that connection is closed.
+Typically, this will be closed by the client.
+
+## Message exchange
+
+Messages are exchanged in a request-response pattern between client and server.
+Each request consists of exactly one message and each response consists of zero or more detail messages followed by exactly one summary message.
+The presence or absence of detail messages in a response is directly related to the type of request message that has been sent.
+In other words, some request message types elicit a response that may contain detail messages, others do not.
+
+Messages may also be pipelined. In other words, clients may send multiple requests eagerly without first waiting for responses.
+When a failure occurs in this scenario, servers **must** ignore all subsequent requests until the client has explicitly acknowledged receipt of the failure.
+This prevents inadvertent execution of queries that may not be valid.
+More details of this process can be found in the sections below.
+
+### Serialization
+
+Messages and their contents are serialized into network streams using [PackStream Specification Version 1](https://neo4j.com/docs/bolt/current/packstream/).
+**Each message is represented as a PackStream structure** that contains a fixed number of fields.
+The message type is denoted by the PackStream structure **tag byte** and each message is defined in the Bolt protocol.
+**Serialization is specified with PackStream Version 1**.
+
+### Chunking
+
+A layer of chunking is also applied to message transmissions as a way to more predictably manage packets of data.
+The chunking process allows the message to be broken into one or more pieces, each of an arbitrary size, and for those pieces to be transmitted within separate chunks.
+Each chunk consists of a **two-byte header**, detailing the chunk size in bytes followed by the chunk data itself.
+Chunk headers are **16-bit unsigned integers**, meaning that the maximum theoretical chunk size permitted is 65,535 bytes.
+
+Each encoded message must be terminated with a chunk of zero size, i.e.
+
+```
+00 00
+```
+
+This is used to signal message boundaries to a receiving parties, allowing blocks of data to be fully received without requiring that the message is parsed immediately.
+This also allows for unknown message types to be received and handled without breaking the messaging chain.
+
+The Bolt protocol encodes each message using a chunked transfer encoding.
+
+- Each message is transferred as one or more chunks of data.
+
+- Each chunk starts with a two-byte header, an unsigned big-endian 16-bit integer, representing the size of the chunk not including the header.
+
+- A message can be divided across multiple chunks, allowing client and server alike to transfer large messages without having to determine the length of the entire message in advance.
+
+- Chunking applies on each message individually.
+
+- One chunk cannot contain more than one message.
+
+- Each message ends with two bytes with the value 00 00, these are not counted towards the chunk size (you may consider them as individual chunks of size 0).
+
+- With version **4.1+**, the `NOOP` chunk (empty chunk) is used to send an empty chunk and the purpose is to be able to support a keep alive behaviour on the connection.
+
+
+#### Examples of how Bolt chunks messages
+
+Example of a message in one chunk
+
+Message data containing 16 bytes:
+
+```
+00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+```
+
+results in the following chunk:
+
+```
+00 10 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 00 00
+```
+
+with the chunk header `00 10` and the end marker `00 00`.
+
+Example of a message split in two chunks
+
+Message data containing 20 bytes:
+
+```
+00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 01 02 03 04
+```
+
+results in chunk 1 and chunk 2:
+
+```
+00 10 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+00 04 01 02 03 04 00 00
+```
+
+with the chunk 1 header `00 01` and no end marker for chunk 1, still message data.
+Chunk 2 has a header `00 04` and an end marker `00 00`.
+
+Example with two messages
+
+Message 1 data containing 16 bytes:
+
+```
+00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+```
+
+Message 2 data containing 8 bytes:
+
+```
+0F 0E 0D 0C 0B 0A 09 08
+```
+
+are both encoded with chunking:
+
+```
+00 10 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 00 00
+00 08 0F 0E 0D 0C 0B 0A 09 08 00 00
+```
+
+Example with two messages with a `NOOP` in between
+
+Message 1 data containing 16 bytes:
+
+```
+00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+```
+
+Message 2 data containing 8 bytes:
+
+```
+0F 0E 0D 0C 0B 0A 09 08
+```
+
+The two messages encoded with chunking and a `NOOP`(empty chunk) in between:
+
+```
+00 10 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 00 00
+00 00
+00 08 0F 0E 0D 0C 0B 0A 09 08 00 00
+```
+
+### Pipelining
+
+The client may send multiple requests eagerly without first waiting for responses.
+
+### Transaction
+
+A transaction is the concept of atomic units of work.
+
+The concept of **Transaction** is when the server is in the `READY` state and the transaction is opened with the request message `RUN` and the response of a summary message `SUCCESS`.
+The **Transaction** is successfully closed with the summary message `SUCCESS` for the request message `PULL_ALL` or the request message `DISCARD_ALL`.
+
+Version **3** of the Bolt Protocol introduces the concept of **Auto-commit Transaction** and **Explicit Transaction**.
+**Auto-commit Transaction** is the server in the `READY` state and the transition to the `STREAMING` state.
+The transaction is opened with the request message `RUN` and the response of a summary message `SUCCESS`.
+
+The **Auto-commit Transaction** is successfully closed with the summary message `SUCCESS` for the request message `PULL_ALL` or the request message `DISCARD_ALL`.
+Thus, the **Auto-commit Transaction** can only contain one `RUN` request message.
+
+In version **4** of the Bolt Protocol, the `DISCARD_ALL` and `PULL_ALL` messages are renamed to `DISCARD` and `PULL` and new fields are introduced.
+
+Example with Bolt **v4**
+
+Example with Bolt **v4**
+
+Copied!
+
+```bolt hljs
+...
+C: HELLO ...
+S: SUCCESS ...  // Server is in READY state
+
+C: RUN ...      // Open a new Auto-commit Transaction
+S: SUCCESS ...  // Server is in STREAMING state
+
+C: PULL ...
+S: RECORD ...
+   ...
+S: RECORD ...
+S: SUCCESS {"has_more": true, ...}  // Server is still in STREAMING state
+
+C: PULL
+S: RECORD ...
+   ...
+S: RECORD ...
+S: SUCCESS {"has_more": false, ...}  // Server is in READY state and this implies that the Auto-commit Transaction is closed.
+```
+
+|     |     |
+| --- | --- |
+|  | In version **1**, `HELLO` is called `INIT` and Auto-commit Transaction is just Transaction.<br>The field `has_more=true/false` is introduced in version **4**.<br>See also the corresponding version of the [Bolt Protocol server state specification](https://neo4j.com/docs/bolt/current/bolt/server-state/). |
+
+The **Explicit Transaction** is introduced in version **3** of Bolt and is a more generic transaction that can contain several `RUN` request messages.
+The concept of **Explicit Transaction** is when the server is in the `READY` state and the transaction is opened with the request message `BEGIN` and the response of a summary message `SUCCESS` (thus transition into the `TX_READY` server state).
+
+The **Explicit Transaction** is successfully closed with the request message `COMMIT` and the response of a summary message `SUCCESS`.
+The result stream (detail messages) must be fully consumed or discarded by a client before the server can transition to the `TX_READY` state and thus be able to close the transaction with a `COMMIT` request message.
+It can be gracefully discarded and set to the initial server state of `READY` with the request message `ROLLBACK`.
+
+Example with Bolt **v4**
+
+Example with Bolt **v4**
+
+Copied!
+
+```bolt hljs
+...
+C: HELLO ...
+S: SUCCESS ...  // Server is in READY state
+
+C: BEGIN ...    // Open a new Explicit Transaction
+S: SUCCESS ...  // Server is in TX_READY state
+
+C: RUN ...
+S: SUCCESS {"qid": 123, ...} // Server is in TX_STREAMING state, one stream is open
+
+C: RUN ...
+S: SUCCESS {"qid": 456, ...} // Server is in TX_STREAMING state, two streams are open
+
+C: PULL {"qid": 123, ...}
+S: RECORD ...
+   ...
+S: RECORD ...
+S: SUCCESS {"has_more": true, ...}  // Server is still in TX_STREAMING state, two streams are still open
+
+C: PULL {"qid": 123, ...}
+S: RECORD ...
+   ...
+S: RECORD ...
+S: SUCCESS ... has_more=false  // Server is still in TX_STREAMING state, one stream is still open
+
+C: PULL {"qid": 456, ...}
+S: RECORD ...
+   ...
+S: RECORD ...
+S: SUCCESS {"has_more": false, ...}  // Server is in TX_READY state, all streams have been fully consumed
+
+C: COMMIT   // Close the Explicit Transaction
+S: SUCCESS  // Server is in READY state
+```
+
+|     |     |
+| --- | --- |
+|  | In version **3**, `PULL` is called `PULL_ALL`.<br>Additionally, there are no fields, e.g `qid=123` and `has_more=true/false` available in version 3 of the Bolt Protocol. |
+
+|     |     |
+| --- | --- |
+|  | More examples of message exchanges can be found in [Appendix — Message exchange examples](https://neo4j.com/docs/bolt/current/appendix/message-exchange-examples/). |
+
+## Messages
+
+There are three different kinds of messages:
+
+- **Request message** \- the client sends a message.
+
+- **Summary message** \- the server always responds with one summary message if the connection is still open.
+
+- **Detail message** \- the server always responds with zero or more detail messages before sending a summary message.
+
+
+| Message | Signature | Type of message | Fields | Description |
+| --- | --- | --- | --- | --- |
+| [`HELLO`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-hello) | `01` | Request | `extra::Dictionary(user_agent::String, routing::Dictionary(address::String), notifications_minimum_severity::String, notifications_disabled_categories::List<String>, bolt_agent::Dictionary(product::String, platform::String, language::String, language_details::String))` | initialize connection (replaces [`INIT`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-init) of **v1** & **v2**)( `routing::Dictionary(address::String)` added in **v4.1**)<br>( `notifications_minimum_severity::String, notifications_disabled_categories::List<String>` added in **v5.2**)( `bolt_agent::Dictionary` added in **v5.3**) |
+| [`LOGON`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-logon) | `6A` | Request | `scheme::String, …​` | authenticates the user you send with the message |
+| [`LOGOFF`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-logoff) | `6B` | Request |  | logs off current user, becomes ready for another `LOGON` message |
+| [`TELEMETRY`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-telemetry) | `54` | Request | `api::Integer` | transmit usage telemetry (added in **v5.4**) |
+| [`GOODBYE`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-goodbye) | `02` | Request |  | close the connection, triggers a `<DISCONNECT>` signal |
+| [`ACK_FAILURE`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-ack-failure) (only **v1** and **v2**) | `0E` | Request |  | acknowledge a failure response (deprecated, use `RESET` instead with **v3+**) |
+| [`RESET`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-reset) | `0F` | Request |  | reset the connection, triggers an `<INTERRUPT>` signal |
+| [`RUN`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-run) | `10` | Request | `query::String, parameters::Dictionary, extra::Dictionary(bookmarks::List<String>, tx_timeout::Integer, tx_metadata::Dictionary, mode::String, db:String, notifications_minimum_severity::String, notifications_disabled_categories::List<String>)` | execute a query ( `extra::Dictionary` added in **v3**)( `db:String` added in **v4.0**)<br>( `notifications_minimum_severity::String, notifications_disabled_categories::List<String>` added in **v5.2**) |
+| [`DISCARD`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-discard) | `2F` | Request | `extra::Dictionary(n::Integer, qid::Integer)` | discard records (replaces `DISCARD_ALL` of **v1**, **v2** & **v3**)(fields added in **v4.0**) |
+| [`PULL`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-pull) | `3F` | Request | `extra::Dictionary(n::Integer, qid::Integer)` | fetch records (replaces `PULL_ALL` of **v1**, **v2** & **v3**)(fields added in **v4.0**) |
+| [`BEGIN`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-begin) | `11` | Request | `extra::Dictionary(bookmarks::List<String>, tx_timeout::Integer, tx_metadata::Dictionary, mode::String, db::String, imp_user::String, notifications_minimum_severity::String, notifications_disabled_categories::List<String>)` | begin a new transaction (added in **v3**)( `db::String, imp_user::String` added in **v4.0**) ( `notifications_minimum_severity::String, notifications_disabled_categories::List<String>` added in **v5.2**) |
+| [`COMMIT`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-commit) | `12` | Request |  | commit a transaction (added in **v3**) |
+| [`ROLLBACK`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-rollback) | `13` | Request |  | rollback a transaction (added in **v3**) |
+| [`ROUTE`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-route) | `66` | Request | `routing::Dictionary(address::String), bookmarks::List<String>, extra::Dictionary(db::String, imp_user::String)` | fetch the current routing table (added in **v4.3**) |
+| [`SUCCESS`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-success) | `70` | Summary | `metadata::Dictionary` | request succeeded |
+| [`IGNORED`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-ignored) | `7E` | Summary |  | request was ignored |
+| [`FAILURE`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-failure) | `7F` | Summary | `metadata::Dictionary` | request failed |
+| [`RECORD`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-record) | `71` | Detail | `data::List` | data values |
+
+### Request message `HELLO`
+
+Introduced in bolt 3
+
+The `HELLO` message request the connection to be authorized for use with the remote database and replaces the `INIT` request message of version **1** and **2**.
+See below for more information on `INIT`.
+
+The server must be in the `CONNECTED` state to be able to process a `HELLO` message.
+For any other states, receipt of an `HELLO` request must be considered a protocol violation and lead to connection closure.
+
+Clients should send `HELLO` message to the server immediately after connection and process the corresponding response before using that connection in any other way.
+
+Clients wishing to retry initialization should establish a new connection.
+
+In version **4.1**, `routing::Dictionary(address::String)` was added to indicate an indicator if the server should carry out routing, according to the given routing context.
+
+In version **5.2**, `notifications_minimum_severity::String` and `notifications_disabled_categories::List<String>` were added to be able to control the notification config.
+Disabling categories or severities allows the server to skip analysis for those, which can speed up query execution.
+
+In version **5.3**, `bolt_agent::Dictionary` was added to indicate the underlying driver and its version as opposed to the application using the driver in \`user\_agent.
+
+|     |     |
+| --- | --- |
+|  | On versions earlier than **5.1**, the authentication token described on the `LOGON` message should be sent as part of the `HELLO` message instead. |
+
+| `routing` values | Description |
+| --- | --- |
+| `{"routing": null}` or `{}` | the server should not carry out routing |
+| `{"routing": {}}` | the server should carry out routing |
+| `{"routing": {"address": "x.example.com:9001", "region": "example", …​}}` | the server should carry out routing according to the given routing context |
+
+**Signature:** `01`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+extra::Dictionary(
+  scheme::String,
+  ...
+  user_agent::String,
+  patch_bolt::List<String>,
+  routing::Dictionary(address::String),
+  notifications_minimum_severity::String,
+  notifications_disabled_categories::List<String>,
+  bolt_agent::Dictionary(
+    product::String,
+    platform::String,
+    language::String,
+    language_details::String
+  )
+)
+```
+
+- `scheme` is the authentication scheme, alongside any additional entries ( `...`) specific to the chosen scheme.
+Predefined schemes are: `"none"`, `"basic"`, `"bearer"`, `"kerberos"` (depending on the server’s capabilities).
+See [`LOGON` message](https://neo4j.com/docs/bolt/current/bolt/message/#messages-logon) for more information.
+Removed after bolt 5.0
+
+- The `user_agent` should conform to `"Name/Version"` for example `"Example/4.1.0"` (see [https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent) for more information).
+Drivers should allow application code to set this value as it is meant to identify the application using the driver.
+
+- `patch_bolt` lets the driver request a patch to the protocol from the server.
+The patch must not be applied until the server acknowledges it in the `SUCCESS` response.
+Default: `[]`.
+Introduced in bolt 4.3Removed after bolt 4.4
+
+
+
+- `"utc"` is currently the only supported patch.
+If successfully negotiated, server and driver will use [DateTime](https://neo4j.com/docs/bolt/current/bolt/structure-semantics/#structure-datetime) and [DateTimeZoneId](https://neo4j.com/docs/bolt/current/bolt/structure-semantics/#structure-datetimezoneid) as defined in Bolt version **5.0**.
+
+
+- The `routing` field should contain routing context information and the address field that should contain the address that the client initially tries to connect with e.g. `"x.example.com:9001"`.
+Key-value entries in the routing context should correspond exactly to those in the original URI query string.
+Setting `routing` to `null` indicates that the server should not carry out any routing.
+Default: `null`.
+Introduced in bolt 4.1
+
+- The `notifications_minimum_severity` specifies the minimum severity a notification needs to have to be returned.
+Please see [Status Codes → Server notification grouping and filtering](https://neo4j.com/docs/status-codes/current/notifications/#notification-grouping-and-filtering) for acceptable entries, with the special value `"OFF"` added to the protocol, which disables all notifications.
+Sending `null` will make the server use its configured default.
+Default: `null`.
+Introduced in bolt 5.2
+
+- The `notifications_disabled_categories` is a list of notification categories that will not be returned.
+Please see [Status Codes → Server notification grouping and filtering](https://neo4j.com/docs/status-codes/current/notifications/#notification-grouping-and-filtering) for available categories.
+Sending `null` will make the server use its configured default.
+Default: `null`.
+Introduced in bolt 5.2
+
+- `bolt_agent::Dictionary`, as opposed to `user_agent`, is meant to identify the driver rather than the application using it.
+Drivers should not allow applications to change this value.
+When populating the fields, drivers should be careful not to include anything that could be used to identify a single machine or user.
+This field is mandatory.
+Introduced in bolt 5.3
+
+
+
+- `product::String` should conform to `"Name/Version"` and identify the driver for example `"neo4j-fortran-alice-doe/42.69.0"`.
+This field is mandatory.
+
+- `platform::String` should describe the platform the driver is running on for example `"Linux 5.15.0-58-generic; x86_64"`.
+Send `null` (or omit) if no platform information is available.
+Default: `null`.
+
+- `language::String` should conform to `"Name/Version"` and describe the language the driver/application is written in for example `"Fortran/77"`.
+Send `null` (or omit) if no language information is available.
+Default: `null`.
+
+- `language_details::String` can contain further information about the language the driver/application is written in for example compiler, runtime, or interpreter and respective versions.
+Send `null` (or omit) if no language details are available.
+Default: `null`.
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+HELLO {extra}
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+HELLO {"user_agent": "Example/4.1.0", "routing": {"address": "x.example.com:9001"}, "bolt_agent": {"product": "neo4j-fortran-alice-doe/42.69.0", "platform": "Linux 5.15.0-58-generic; x86_64", "language": "Fortran/77", "language_details": "gfortran 9.3.0"}}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+HELLO {"user_agent": "Example/4.2.0", "patch_bolt": ["utc"], "routing": {"address": "x.example.com:9001", "policy": "example_policy_routing_context", "region": "example_region_routing_context"}, "notifications_minimum_severity": "WARNING", "notifications_disabled_categories": ["HINT", "GENERIC"]}
+```
+
+#### Server response `SUCCESS`
+
+A `SUCCESS` message response indicates that the client is permitted to exchange further messages.
+Servers can include metadata that describes details of the server environment and/or the connection.
+
+The following fields are defined for inclusion in the `SUCCESS` metadata:
+
+- `server::String` (server agent string, example `"Neo4j/4.1.0"`)
+
+- `connection_id::String` (unique identifier of the bolt connection used on the server side, example: `"bolt-61"`)
+
+- `patch_bolt::List<String>` only if the client requested patches in the `patch_bolt` field of the request.
+The server will include the subset of requested patches (with the exact same string the client requests) if it supports it.
+From that point onward, the server-client communication _must only_ use the patched protocol.
+Introduced in bolt 4.3Removed after bolt 4.4
+
+- `hints::Dictionary` (set of optional configuration hints to be considered by the driver)
+Introduced in bolt 4.3
+
+
+The `hints` dictionary may contain a set of optional configuration hints which may be interpreted or ignored by drivers at their own discretion in order to augment operations where applicable.
+A full listing of the available hints may be found in [Appendix — Connection hints](https://neo4j.com/docs/bolt/current/appendix/connection-hints/).
+Hints remain valid throughout the lifetime of a given connection and cannot be changed.
+As such, newly established connections may observe different hints and/or hint values as the server configuration is adjusted.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {"server": "Neo4j/4.0.0", "hints": {"connection.recv_timeout_seconds": 120}}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+SUCCESS {"server": "Neo4j/4.4.0", "patch_bolt": ["utc"], "hints": {"connection.recv_timeout_seconds": 120}}
+```
+
+#### Server response `FAILURE`
+
+A `FAILURE` message response indicates that the client is not permitted to exchange further messages.
+Servers may choose to include metadata describing the nature of the failure but must immediately close the connection after the failure has been sent.
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** +
+
+Example **v1** +
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `INIT`
+
+Introduced in bolt 1Removed after bolt 2
+
+The `INIT` message is a request for the connection to be authorized for use with the remote database.
+
+The request message `INIT` is only valid in version **1** and **2** and is replaced by the request message `HELLO` in version **3+**.
+
+The `INIT` message uses the structure signature `01` and passes two fields: `user agent` (String) and `auth_token` (Dictionary).
+
+The server must be in the `CONNECTED` state to be able to process an `INIT` request.
+For any other states, receipt of an `INIT` request must be considered a protocol violation and lead to connection closure.
+
+Clients should send `INIT` requests to the network immediately after connection and process the corresponding response before using that connection in any other way.
+
+A receiving server may choose to register or otherwise log the user agent but may also ignore it if preferred.
+
+The auth token should be used by the server to determine whether the client is permitted to exchange further messages.
+If this authentication fails, the server must respond with a `FAILURE` message and immediately close the connection.
+Clients wishing to retry initialization should establish a new connection.
+
+**Signature:** `01`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+user_agent::String,
+auth_token::Dictionary(
+  scheme::String,
+  principal::String,
+  credentials::String,
+)
+```
+
+- The `user_agent` should conform to `"Name/Version"` for example `"Example/1.1.0"` (see [https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent) for more information).
+
+- The `scheme` is the authentication scheme.
+Predefined schemes are `"none"` and `"basic"`.
+If no `scheme` is provided, it defaults to `"none"`.
+
+- The `auth_token` must contain either just the entry `{"scheme" : "none"}` or the keys `scheme`, `principal` and `credentials`.
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid Summary Messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+INIT "user_agent" {auth_token}
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+INIT "Example/1.0.0" {"scheme": "none"}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+INIT "Example/1.0.0" {"scheme": "basic", "principal": "neo4j", "credentials": "password"}
+```
+
+#### _Server response \`SUCCESS\`_
+
+A `SUCCESS` message response indicates that the client is permitted to exchange further messages.
+Servers can include metadata that describes details of the server environment and/or the connection.
+
+The following fields are defined for inclusion in the `SUCCESS` metadata.
+
+- `server::String` (server agent string, example `"Neo4j/3.4.0"`)
+
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {"server": "Neo4j/3.4.0"}
+```
+
+#### _Server response \`FAILURE\`_
+
+A `FAILURE` message response indicates that the client is not permitted to exchange further messages.
+
+Servers may choose to include metadata describing the nature of the failure but must immediately close the connection after the failure has been sent.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `LOGON`
+
+Introduced in bolt 5.1
+
+A `LOGON` message carries an authentication request.
+
+This message is new in version **5.1**. In previous versions, authentication was part of the `HELLO` message.
+
+**Signature:** `6A`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+auth::Dictionary(
+  scheme::String,
+  ...
+)
+```
+
+- The `scheme` is the authentication scheme.
+Predefined schemes are `none`, `basic`, `bearer` and `kerberos` (depending on the server’s capabilities).
+
+- Further entries in the message are passed to the implementation of the chosen authentication scheme.
+Their names, types, and defaults depend on that choice.
+
+
+
+- The scheme `basic` requires a username `principal::String` and a password `credentials::String`.
+
+- The scheme `bearer` merely requires a token `credentials::String`.
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+If authentication fails, the server responds with a `FAILURE` message and immediately closes the connection.
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+LOGON {auth}
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+LOGON {"scheme": "basic", "principal": "user", "credentials": "password"}
+```
+
+#### Server response `SUCCESS`
+
+A `SUCCESS` message response indicates that the client has been successfully authenticated.
+
+The following fields are defined for inclusion in the `SUCCESS` metadata.
+
+- `advertised_address::String?` \- the configured advertised address of the database server.
+Introduced in bolt 5.8
+
+- `credentials_expired::Boolean` \- the sent credentials are expired, the user must update them.
+If this field is not present, it should be considered to be `false`.
+
+
+Example **v5.8+**
+
+Example **v5.8+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"advertised_address": "graphz.example.com:7687"}
+```
+
+Example **v5.1+**
+
+Example **v5.1+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {}
+```
+
+### Request message `LOGOFF`
+
+Introduced in bolt 5.1
+
+A `LOGOFF` message logs off the currently authenticated user. The connection is then ready for another `LOGON` message.
+
+This message is new in version **5.1**. No equivalent exists in previous versions.
+
+**Signature:** `6B`
+
+**Fields:** No fields
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+LOGOFF
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+LOGOFF
+```
+
+#### Server response `SUCCESS`
+
+If a `LOGOFF` message request has been successfully received, the server should respond with a `SUCCESS` message and enter the `AUTHENTICATION` state.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {}
+```
+
+#### Server response `FAILURE`
+
+If `LOGOFF` message is received while the server is not in the `READY` state, it should trigger a `FAILURE` followed by immediate closure of the connection.
+The server may attach metadata to the message to provide more detail on the nature of the failure.
+Clients receiving a `FAILURE` in response to `LOGOFF` should treat that connection as `DEFUNCT` and dispose of it.
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Neo.ClientError.Request.Invalid", "message": "Message 'LogoffMessage{}' cannot be handled by a session in the FAILED state."}
+```
+
+Example **v5.1+**
+
+Example **v5.1+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"neo4j_code": "Neo.ClientError.Request.Invalid", "message": "Message 'LogoffMessage{}' cannot be handled by session in the READY state", "gql_status": "08N06", "description": "error: connection exception - protocol error. General network protocol error.", "diagnostic_record": {"_classification": "CLIENT_ERROR"}, "cause": {"message": "08N10: Message LogoffMessage{} cannot be handled by session in the 'READY' state.", "gql_status": "08N10", "description": "error: connection exception - invalid server state. Message LogoffMessage{} cannot be handled by session in the 'READY' state.", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}}
+```
+
+### Request message `TELEMETRY`
+
+Introduced in bolt 5.4
+
+The `TELEMETRY` message contains an integer representing which driver API was used.
+
+The telemetry information is stored on the server’s metrics system.
+The client receives a `SUCCESS` response, unless it sends an invalid value for the `api` field, which results in a `FAILURE` response.
+
+Clients should offer the user the option to disable sending telemetry.
+Further, the server might opt out of receiving telemetry from the client by sending the corresponding configuration hint in the `SUCCESS` message of the `HELLO` message.
+See [Appendix — Connection hints](https://neo4j.com/docs/bolt/current/appendix/connection-hints/#hint-telemetry-enabled) for more information.
+If the client ignores the hint, the server must still accept the `TELEMETRY` message.
+
+The message may only be sent in the `READY` state.
+
+**Signature:** `54`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+api::Integer
+```
+
+Valid values for `api` and the corresponding API associations are:
+
+- `0` — Managed transaction
+
+- `1` — Explicit transaction
+
+- `2` — Implicit transaction
+
+- `3` — Driver-level `execute_query()`
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+TELEMETRY api
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+TELEMETRY 0
+```
+
+#### Server response `SUCCESS`
+
+If a `TELEMETRY` message request is successfully received, the server responds with a `SUCCESS` and remains in its current state.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {}
+```
+
+#### Server response `FAILURE`
+
+If a `TELEMETRY` message contains a value that is not a valid `api` value or is sent in the wrong state, the server responds with a `FAILURE` message and enters the `FAILED` state.
+
+Example 1 **v5.7+**
+
+Example 1 **v5.7+**
+
+Copied!
+
+```bolt hljs
+C: TELEMETRY 2
+S: FAILURE {"neo4j_code": "Neo.ClientError.Request.Invalid", "message": "Message of type TelemetryMessage cannot be handled by a session in the NEGOTIATION state.", "gql_status": "50N42", "description": "error: general processing exception - unexpected error. Unexpected error has occurred. See debug log for details."}
+```
+
+Example 1 **v5.4+**
+
+Example 1 **v5.4+**
+
+Copied!
+
+```bolt hljs
+C: TELEMETRY 2
+S: FAILURE {"code": "Neo.ClientError.Request.Invalid", "message": "Message of type TelemetryMessage cannot be handled by a session in the NEGOTIATION state."}
+```
+
+Example 2 **v5.7+**
+
+Example 2 **v5.7+**
+
+Copied!
+
+```bolt hljs
+C: TELEMETRY "oh no!"
+S: FAILURE {"neo4j_code": "Neo.ClientError.Request.Invalid", "message": "Unexpected type: Expected INT but got STRING", "gql_status": "22G03", "description": "error: data exception - invalid value type", "cause": {"message": "22N01: Expected the value 128 to be of type INT, but was of type STRING.", "gql_status": "22N01", "description": "error: data exception - invalid type. Expected the value 128 to be of type INT, but was of type STRING.", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}}
+```
+
+Example 2 **v5.4+**
+
+Example 2 **v5.4+**
+
+Copied!
+
+```bolt hljs
+C: TELEMETRY "oh no!"
+S: FAILURE {"code": "Neo.ClientError.Request.Invalid", "message": "Unexpected type: Expected INT but got STRING"}
+```
+
+Example 3 **v5.7+**
+
+Example 3 **v5.7+**
+
+Copied!
+
+```bolt hljs
+C: TELEMETRY 9001
+S: FAILURE {"neo4j_code": "Neo.DatabaseError.General.UnknownError", "message": "org.neo4j.packstream.error.reader.PackstreamReaderException: Unknown driver interface type 9001", "gql_status": "50N00", "description": "error: general processing exception - internal error. Internal exception raised DecoderException: org.neo4j.packstream.error.reader.PackstreamReaderException: Unknown driver interface type 9001", "cause": {"message": "50N09: The server transitioned into a server state that is not valid in the current context: 'uncaught error'.", "gql_status": "50N09", "description": "error: general processing exception - invalid server state transition. The server transitioned into a server state that is not valid in the current context: 'uncaught error'.", "diagnostic_record": {"_classification": "DATABASE_ERROR"}}}
+```
+
+Example 3 **v5.4+**
+
+Example 3 **v5.4+**
+
+Copied!
+
+```bolt hljs
+C: TELEMETRY 9001
+S: FAILURE {"code": "Neo.DatabaseError.General.UnknownError", "message": "org.neo4j.packstream.error.reader.PackstreamReaderException: Unknown driver interface type 9001"}
+```
+
+### Request message `GOODBYE`
+
+Introduced in bolt 3
+
+The `GOODBYE` message notifies the server that the connection is terminating gracefully.
+On receipt of this message, the server should immediately shut down the socket on its side without sending a response.
+
+A client may shut down the socket at any time after sending the `GOODBYE` message.
+This message interrupts the server current work if there is any.
+
+**Signature:** `02`
+
+**Fields:** No fields.
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+No summary messages should be returned.
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+GOODBYE
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+GOODBYE
+```
+
+### Request message `ACK_FAILURE`
+
+Introduced in bolt 1Removed after bolt 2
+
+The request message `ACK_FAILURE` signals to the server that the client has acknowledged a previous failure and should return to a `READY` state.
+
+The request message `ACK_FAILURE` is only valid in version **1** and **2** and the request message `RESET` should be used in its place in version **3+**.
+
+**Signature:** `0E`
+
+**Fields:** No fields.
+
+**Detail messages**:
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+The server must be in a `FAILED` state to be able to successfully process an `ACK_FAILURE` request.
+For any other states, receipt of an `ACK_FAILURE` request will be considered a protocol violation and will lead to connection closure.
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+ACK_FAILURE
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+ACK_FAILURE
+```
+
+#### _Server response \`SUCCESS\`_
+
+If an `ACK_FAILURE` request has been successfully received, the server should respond with a `SUCCESS` message and enter the `READY` state.
+
+The server may attach metadata to the `SUCCESS` message.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {}
+```
+
+#### _Server response message \`FAILURE\`_
+
+If an `ACK_FAILURE` request is received while not in the `FAILED` state, the server should respond with a `FAILURE` message and immediately close the connection.
+
+The server may attach metadata to the message to provide more detail on the nature of the failure.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `RESET`
+
+Introduced in bolt 1
+
+The `RESET` message requests that the connection should be set back to its initial `RESET` state, as if a `HELLO` ( `INIT` in **v1** and **v2**) (and a `LOGON` in **v5.1+**) had just successfully completed.
+The `RESET` message is unique in that, on arrival at the server, it jumps ahead in the message queue, stopping any unit of work that happens to be executing.
+All the queued messages originally in front of the `RESET` message will then be `IGNORED` until the `RESET` position is reached.
+Then from this point, the server state is reset to a state that is ready for a new session.
+
+In version **1** and **2**, the `RESET` message splits into two separate signals.
+First, an `<INTERRUPT>` signal jumps ahead in the message queue, stopping any unit of work that happens to be executing, and putting the state machine into an `INTERRUPTED` state.
+Second, the `RESET` queues along with all other incoming messages and is used to put the state machine back to `READY` when its turn for processing arrives.
+This essentially means that the `INTERRUPTED` state exists only transitionally between the arrival of a `RESET` in the message queue and the later processing of that `RESET` in its proper position.
+The `INTERRUPTED` state is therefore the only state to automatically resolve without any further input from the client and whose entry does not generate a response message.
+
+**Signature:** `0F`
+
+**Fields:** No fields
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+RESET
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+RESET
+```
+
+#### Server response `SUCCESS`
+
+If a `RESET` message request has been successfully received, the server should respond with a `SUCCESS` message and enter the `READY` state.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {}
+```
+
+#### Server response `FAILURE`
+
+If `RESET` message is received before the server enters a `READY` state, it should trigger a `FAILURE` followed by immediate closure of the connection.
+The server may attach metadata to the message to provide more detail on the nature of the failure.
+Clients receiving a `FAILURE` in response to `RESET` should treat that connection as `DEFUNCT` and dispose of it.
+
+Example **v5.7** +
+
+Example **v5.7** +
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1**- **v5.6**
+
+Example **v1**- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `RUN`
+
+Introduced in bolt 1
+
+The `RUN` message requests that a Cypher query is executed with a set of parameters and additional extra data.
+
+In version **3+**, this message can both be used in an Explicit Transaction or an Auto-commit Transaction.
+The transaction type is implied by the message sequence:
+
+- **Explicit Transaction**: `RUN` while inside a transaction context started with `BEGIN` first.
+
+- **Auto-commit Transaction**: `RUN` without having started an explicit transaction with `BEGIN` first.
+
+
+In version **5.2**, `notifications_minimum_severity::String` and `notifications_disabled_categories::List<String>` were added to be able to control the notification config.
+Disabling categories or severities allows the server to skip analysis for those, which can speed up query execution.
+
+**Signature:** `10`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+query::String,
+parameters::Dictionary,
+extra::Dictionary(
+  bookmarks::List<String>,
+  tx_timeout::Integer,
+  tx_metadata::Dictionary,
+  mode::String,
+  db::String,
+  imp_user::String,
+  notifications_minimum_severity::String,
+  notifications_disabled_categories::List<String>
+)
+```
+
+- The `query` can be any Cypher query (including a procedure call).
+
+- The `parameters` is a `dictionary` of parameters to be used in the `query` string.
+
+
+An **Explicit Transaction** ( `BEGIN` + `RUN`) does not carry any data in the extra field.
+
+For **Auto-commit Transaction** ( `RUN`) the extra field carries:
+
+- `extra` contains additional options.
+Introduced in bolt 3
+
+
+
+- The `bookmarks` is a list of strings containing some kind of bookmark identification, e.g., `["neo4j-bookmark-transaction:1", "neo4j-bookmark-transaction:2"]`.
+Default: `[]`.
+
+- The `tx_timeout` is an integer in that specifies a transaction timeout in ms.
+Default: server-side configured timeout.
+
+- The `tx_metadata` is a dictionary that can contain some metadata information, mainly used for logging.
+Default: `null`.
+
+- The `mode` specifies what kind of server the RUN message is targeting.
+For write access use `"w"` and for read access use `"r"`.
+Default: `"w"`.
+
+- The `db` specifies the database name for multi-database to select where the transaction takes place. `null` and `""` denote the server-side configured default database.
+Default: `null`.
+Introduced in bolt 4.0
+
+- The `imp_user` key specifies the impersonated user which executes this transaction.
+`null` denotes no impersonation (execution takes place as the current user).
+Default: `null`.
+Introduced in bolt 4.4
+
+- The `notifications_minimum_severity` specifies the minimum severity a notification needs to have to be returned.
+Please see [Status Codes → Server notification grouping and filtering](https://neo4j.com/docs/status-codes/current/notifications/#notification-grouping-and-filtering) for acceptable entries, with the special value `"OFF"` added to the protocol, which disables all notifications.
+Sending `null` will make the server use whatever was specified in the `HELLO` message of the current connection.
+Default: `null`.
+Introduced in bolt 5.2
+
+- The `notifications_disabled_categories` is a list of notification categories that will not be returned.
+Please see [Status Codes → Server notification grouping and filtering](https://neo4j.com/docs/status-codes/current/notifications/#notification-grouping-and-filtering) for available categories.
+Sending `null` will make the server use whatever was specified in the `HELLO` message of the current connection.
+Default: `null`.
+Introduced in bolt 5.2
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+_The server must be in a `READY` or `READY_TX` ( **v3+**) state to be able to successfully process a `RUN` request._ _If the server is in a `FAILED` or `INTERRUPTED` state, the request will be `IGNORED`._ _For any other states, receipt of a `RUN` request will be considered a protocol violation and will lead to connection closure._
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+RUN "query" {parameters} {extra}
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+RUN "RETURN $x AS x" {"x": 1} {"bookmarks": [], "tx_timeout": 123, "tx_metadata": {"log": "example_message"}, "mode": "r"}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+RUN "RETURN $x AS x" {"x": 1} {}
+```
+
+Example 3
+
+Example 3
+
+Copied!
+
+```bolt hljs
+RUN "CALL dbms.procedures()" {} {}
+```
+
+Example 3
+
+Example 3
+
+Copied!
+
+```bolt hljs
+RUN "RETURN 42" {} {"notifications_minimum_severity": "WARNING", "notifications_disabled_categories": ["HINT", "GENERIC"]}
+```
+
+#### Server response `SUCCESS`
+
+A `SUCCESS` message response indicates that the client is permitted to exchange further messages.
+
+The following fields are defined for inclusion in the `SUCCESS` metadata.
+
+- `fields::List<String>`, the fields of the return result. e.g. \[“name”, “age”, …\]
+
+- `t_first::Integer`, the time, specified in ms, which the first record in the result stream is available after.
+
+
+For **Implicit Transaction** ( `RUN`):
+
+- `db::String?` \- resolved user’s home database that the transaction will run into.
+The field is only present if the client did not explicitly provide a database to start the transaction for.
+Introduced in bolt 5.8
+
+
+For **Explicit Transaction** ( `BEGIN` + `RUN`):
+
+- `qid::Integer` specifies the server assigned statement ID to reference the server side result-set with commencing `BEGIN` \`RUN\` `PULL` and `BEGIN` \`RUN\` `DISCARD` messages.
+Introduced in bolt 4.0
+
+
+Example **v4.0+**
+
+Example **v4.0+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"fields": ["x"], "t_first": 123, "qid": 7000}
+```
+
+Example **v3+**
+
+Example **v3+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"fields": ["x"], "t_first": 123}
+```
+
+_For **v1** and **v2**, if a `RUN` request has been successfully received and is considered valid by the server, the server should respond with a `SUCCESS` message and enter the `STREAMING` state._ _The server may attach metadata to the message to provide header detail for the results that follow._ _Clients should not consider a `SUCCESS` response to indicate completion of the execution of that query, merely acceptance of it._ _The following fields are defined for inclusion in the metadata:_
+
+- _\`fields\` (e.g. \[ `"name"`, `"age"`\])_
+
+- _\`result\_available\_after\` (e.g. `123`)_
+
+
+Example **v1** and **v2**
+
+Example **v1** and **v2**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"fields": ["x"], "result_available_after": 123}
+```
+
+#### Server response `IGNORED`
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+#### Server response `FAILURE`
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** \- **v5.6**
+
+Example **v1** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `DISCARD`
+
+Introduced in bolt 1
+
+The `DISCARD` message requests that the remainder of the result stream should be thrown away.
+
+_In **v1**, **v2** and **v3**, this message is called `DISCARD_ALL`, has **no fields** and issues a request to discard the outstanding result and return to a `READY` state._ _A receiving server should not abort the request but continue to process it without streaming any detail messages back to the client._
+
+**Signature:** `2F`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+extra::Dictionary(
+  n::Integer,
+  qid::Integer
+)
+```
+
+- `extra` contains additional options.
+Introduced in bolt 4.0
+
+
+
+- The `n` specifies how many records to throw away.
+`n=-1` will throw away all records.
+`n` has no default and must be present.
+
+- The `qid` (query identification) specifies for which statement the operation should be carried out ( **Explicit Transaction** only).
+`qid=-1` can be used to denote the last executed statement.
+Default: `-1`.
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+DISCARD {extra}
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+DISCARD {"n": -1, "qid": -1}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+DISCARD {"n": 1000}
+```
+
+Example 3 **v1**, **v2** or **v3**
+
+Example 3 **v1**, **v2** or **v3**
+
+Copied!
+
+```bolt hljs
+DISCARD_ALL
+```
+
+In version **1** and **2**, the server must be in a `STREAMING` or `STREAMING_TX` ( **v3+**) state to be able to successfully process a `DISCARD` request.
+If the server is in a `FAILED` state or `INTERRUPTED` state, the request will be `IGNORED`.
+For any other states, receipt of a `DISCARD` request will be considered a protocol violation and will lead to connection closure.
+
+#### Server response `SUCCESS`
+
+- `has_more::Boolean`, `true` if there are no more records to stream.
+If this field is not present, it should be considered to default to `false`.
+Introduced in bolt 4.0
+
+
+Or in the case that `has_more` is `false`:
+
+- `bookmark::String` — the bookmark after committing this transaction ( **Autocommit Transaction** only).
+
+- `db::String` — the database name where the query was executed.
+Introduced in bolt 4.0
+
+- `notifications::List<Dictionary>` — a list of all notifications generated during execution of this statement.
+May be omitted if no notifications exist.
+In **v3**, this field is `notifications::Dictionary`.
+Introduced in bolt 3Removed after bolt 5.4
+
+- `statuses::List<Dictionary>` — a list of all gqlStatusObjects generated during execution of this statement.
+Introduced in bolt 5.6
+
+- `plan::Dictionary` — plan result.
+Introduced in bolt 3
+
+- `profile::Dictionary` — profile result.
+Introduced in bolt 3
+
+- `result_consumed_after::Integer` — same as `t_last`.
+Removed after bolt 2
+
+- `result_available_after::Integer` — same as `t_first`.
+Removed after bolt 2
+
+- `stats::Dictionary` — counter information, such as db-hits etc.
+Introduced in bolt 3
+
+- `t_last::Integer` — the time (in ms) after which the last record in the result stream is consumed.
+Introduced in bolt 3
+
+- `t_first::Integer` — the time (in ms) after which the DBMS was ready to stream the first record in the result.
+Introduced in bolt 3
+
+- `type::String` — the type of the statement, e.g. `"r"` for read-only statement, `"w"` for write-only statement, `"rw"` for read-and-write, and `"s"` for schema only.
+Introduced in bolt 3
+
+
+Example 1 **v4+**
+
+Example 1 **v4+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"has_more": true}
+```
+
+Example 2 **v4+**
+
+Example 2 **v4+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"bookmark": "example-bookmark:1", "db": "example_database"}
+```
+
+Example **v3**
+
+Example **v3**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"bookmark": "example-bookmark:1"}
+```
+
+In version **1** and **2**, if a `DISCARD_ALL` request has been successfully received, the server should respond with a `SUCCESS` message and enter the `READY` state.
+
+Example **v1** and **v2**
+
+Example **v1** and **v2**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"bookmark": "example_bookmark_identifier", "result_consumed_after": 123}
+```
+
+### Request message `PULL`
+
+The `PULL` message requests data from the remainder of the result stream.
+
+In **v1**, **v2**, and **v3**, this message is called `PULL_ALL` and has **no fields**.
+In **v1** and **v2**, this message issues a request to stream the outstanding result back to the client, before returning to a `READY` state.
+Result detail consists of zero or more detail messages being sent before the summary message.
+This version of the protocol defines one such detail message, namely `RECORD` (described below).
+
+**Signature:** `3F`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+extra::Dictionary(
+  n::Integer,
+  qid::Integer
+)
+```
+
+- `extra` contains additional options.
+Introduced in bolt 4.0
+
+
+
+- The `n` specifies how many records to fetch.
+`n=-1` will fetch all records.
+`n` has no default and must be present.
+
+- The qid (query identification) specifies for which statement the operation should be carried out ( **Explicit Transaction** only).
+`qid=-1` can be used to denote the last executed statement.
+Default: `-1`.
+
+
+**Detail messages:**
+
+Zero or more `RECORD`.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+PULL {extra}
+```
+
+Synopsis **v1** \- **v3**
+
+Synopsis **v1** \- **v3**
+
+Copied!
+
+```bolt hljs
+PULL_ALL
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+PULL {"n": -1, "qid": -1}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+PULL {"n": 1000}
+```
+
+Example **v1** \- **v3**
+
+Example **v1** \- **v3**
+
+Copied!
+
+```bolt hljs
+PULL_ALL
+```
+
+#### Server response `SUCCESS`
+
+The following fields are defined for inclusion in the `SUCCESS` metadata:
+
+- `has_more::Boolean`, `true` if there are more records to stream.
+If this field is not present it should be considered to default to `false`.
+
+
+Or in the case that `has_more` is `false`:
+
+- `bookmark::String` — the bookmark after committing this transaction ( **Autocommit Transaction** only).
+
+- `db::String` — the database name where the query was executed.
+Introduced in bolt 4.0
+
+- `notifications::List<Dictionary>` — a list of all notifications generated during execution of this statement.
+May be omitted if no notifications exist.
+In **v3**, this field is `notifications::Dictionary`.
+Removed after bolt 5.4
+
+- `statuses::List<Dictionary>` — a list of all gqlStatusObjects generated during execution of this statement.
+Introduced in bolt 5.6
+
+- `plan::Dictionary` — plan result.
+Introduced in bolt 3
+
+- `profile::Dictionary` — profile result.
+Introduced in bolt 3
+
+- `result_consumed_after::Integer` — same as `t_last`.
+Removed after bolt 2
+
+- `result_available_after::Integer` — same as `t_first`.
+Removed after bolt 2
+
+- `stats::Dictionary` — counter information, such as db-hits etc.
+Introduced in bolt 3
+
+- `t_last::Integer` — the time (in ms) after which the last record in the result stream is consumed.
+Introduced in bolt 3
+
+- `t_first::Integer` — the time (in ms) after which the first record in the result stream is available.
+Introduced in bolt 3
+
+- `type::String` — the type of the statement, e.g. `"r"` for read-only statement, `"w"` for write-only statement, `"rw"` for read-and-write, and `"s"` for schema only.
+Introduced in bolt 3
+
+
+Example **v3+**
+
+Example **v3+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"bookmark": "example-bookmark:1", "t_last": 123}
+```
+
+Example **v1** \- **v2**
+
+Example **v1** \- **v2**
+
+Copied!
+
+```bolt hljs
+SUCCESS {"bookmark": "example_bookmark_identifier", "result_consumed_after": 123}
+```
+
+#### Server response `IGNORED`
+
+For **v1** and **v2**, a server that receives a `PULL_ALL` request while in `FAILED` state or `INTERRUPTED` state, should respond with an `IGNORED` message and discard the request without processing it.
+No state change should occur.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+#### Server response `FAILURE`
+
+For **v1** and **v2**, a `PULL_ALL` message request cannot be processed successfully, the server should respond with a `FAILURE` message and enter the `FAILED` state.
+The server may attach metadata to the message to provide more detail on the nature of the failure.
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** \- **v5.6**
+
+Example **v1** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+#### Server response `RECORD` (in **v1** and **v2**)
+
+Zero or more `RECORD` messages may be returned in response to a `PULL_ALL` prior to the trailing summary message.
+Each record carries with it **a list of values** which form the data content of the record.
+The order of the values within the list should be meaningful to the client, perhaps based on a requested ordering for that result, but no guarantees should be made around the order of records within the result.
+A record should only be considered valid if followed by a `SUCCESS` summary message.
+Until this summary has been received, the record’s validity should be considered tentative.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+RECORD [1, 2, 3]
+```
+
+### Request massage `BEGIN`
+
+Introduced in bolt 1
+
+The `BEGIN` message request the creation of a new **Explicit Transaction**.
+This message should then be followed by a `RUN` message.
+The **Explicit Transaction** is closed with either the `COMMIT` message or `ROLLBACK` message.
+
+In version **5.2**, `notifications_minimum_severity::String` and `notifications_disabled_categories::List<String>` were added to be able to control the notification config.
+Disabling categories or severities allows the server to skip analysis for those, which can speed up query execution.
+
+**Signature:** `11`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+extra::Dictionary(
+  bookmarks::List<String>,
+  tx_timeout::Integer,
+  tx_metadata::Dictionary,
+  mode::String,
+  db::String,
+  imp_user::String,
+  notifications_minimum_severity::String,
+  notifications_disabled_categories::List<String>
+)
+```
+
+- The `bookmarks` is a list of strings containing some kind of bookmark identification e.g \[ `"neo4j-bookmark-transaction:1"`, `"neo4j-bookmark-transaction:2"`\].
+Default: \[\].
+
+- The `tx_timeout` is an integer in that specifies a transaction timeout in ms.
+Default: server-side configured timeout.
+
+- The `tx_metadata` is a dictionary that can contain some metadata information, mainly used for logging.
+Default: `null`.
+
+- The `mode` specifies what kind of server the `RUN` message is targeting.
+For write access use `"w"` and for read access use `"r"`.
+Defaults to write access if no mode is sent. Default: `"w"`.
+
+- The `db` specifies the database name for multi-database to select where the transaction takes place.
+`null` and `""` denote the server-side configured default database.
+Default: `null`.
+Introduced in bolt 4.0
+
+- The `imp_user` key specifies the impersonated user which executes this transaction.
+`null` denotes no impersonation (execution takes place as the current user).
+Default: `null`.
+Introduced in bolt 4.4
+
+- The `notifications_minimum_severity` specifies the minimum severity a notification needs to have to be returned.
+Please see the [Status Codes → Server notification grouping and filtering](https://neo4j.com/docs/status-codes/current/notifications/#notification-grouping-and-filtering) for acceptable entries, with the special value `"OFF"` added to the protocol, which disables all notifications.
+Sending `null` will make the server use whatever was specified in the `HELLO` message of the current connection.
+Default: `null`.
+Introduced in bolt 5.2
+
+- The `notifications_disabled_categories` is a list of notification categories that will not be returned.
+Please see [Status Codes → Server notification grouping and filtering](https://neo4j.com/docs/status-codes/current/notifications/#notification-grouping-and-filtering) for available categories.
+Sending `null` will make the server use whatever was specified in the `HELLO` message of the current connection.
+Default: `null`.
+Introduced in bolt 5.2
+
+
+**Detail messages:**
+
+No detail messages.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+BEGIN {extra}
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+BEGIN {"tx_timeout": 123, "mode": "r", "db": "example_database", "tx_metadata": {"log": "example_log_data"}, "imp_user" : "bob"}
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+BEGIN {"db": "example_database", "tx_metadata": {"log": "example_log_data"}, "bookmarks": ["example-bookmark:1", "example-bookmark2"]}
+```
+
+Example 3
+
+Example 3
+
+Copied!
+
+```bolt hljs
+BEGIN {"notifications_minimum_severity": "WARNING", "notifications_disabled_categories": ["HINT", "GENERIC"]}
+```
+
+#### Server response `SUCCESS`
+
+The following fields are defined for inclusion in the `SUCCESS` metadata:
+
+- `db::String?` \- resolved user’s home database that the transaction will run into.
+The field is only present if the client did not explicitly provide a database to start the transaction for.
+Introduced in bolt 5.8
+
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {}
+```
+
+Example with Home Database Resolution
+
+Example with Home Database Resolution
+
+Copied!
+
+```bolt hljs
+SUCCESS {"db": "my_home_db"}
+```
+
+#### Server response `IGNORED`
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+#### Server response `FAILURE`
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** \- **v5.6**
+
+Example **v1** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `COMMIT`
+
+The `COMMIT` message request that the **Explicit Transaction** is done.
+
+The `COMMIT` message does not exist in **v1** and **v2**.
+
+**Signature:** `12`
+
+**Fields:** No fields.
+
+**Detail messages:**
+
+No detail messages.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+COMMIT
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+COMMIT
+```
+
+#### Server response `SUCCESS`
+
+A `SUCCESS` message response indicates that the **Explicit Transaction** was completed:
+
+- `bookmark::String`, the bookmark after committing this transaction.
+
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {"bookmark": "example-bookmark:1"}
+```
+
+#### Server response `IGNORED`
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+#### Server response `FAILURE`
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** \- **v5.6**
+
+Example **v1** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `ROLLBACK`
+
+The `ROLLBACK` message requests that the **Explicit Transaction** rolls back.
+
+The `ROLLBACK` message does not exist in **v1** and **v2**.
+
+**Signature:** `13`
+
+**Fields:** No fields.
+
+**Detail messages:**
+
+No detail messages.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+ROLLBACK
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+ROLLBACK
+```
+
+#### Server response `SUCCESS`
+
+A `SUCCESS` message response indicates that the **Explicit Transaction** was rolled back.
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS
+```
+
+#### Server response `IGNORED`
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+#### Server response `FAILURE`
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** \- **v5.6**
+
+Example **v1** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Request message `ROUTE`
+
+Introduced in bolt 4.3
+
+The `ROUTE` instructs the server to return the current routing table.
+In previous versions there was no explicit message for this and a procedure had to be invoked using Cypher through the `RUN` and `PULL` messages.
+
+This message can only be sent after successful authentication and outside of transactions.
+
+**Signature:** `66`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+routing::Dictionary,
+bookmarks::List<String>,
+db::String,
+extra::Dictionary(
+  db::String,
+  imp_user::String,
+)
+```
+
+Note that in **v4.4**, the `db` parameter is migrated into a dedicated dictionary named `extra` that also includes the `imp_user` and thus, in **v4.3** the fields are:
+
+Copied!
+
+```bolt hljs
+routing::Dictionary,
+bookmarks::List<String>,
+db::String
+```
+
+- The routing field should contain routing context information and the address field that should contain the address that the client initially tries to connect with e.g. `"x.example.com:9001"`.
+Key-value entries in the routing context should correspond exactly to those in the original URI query string.
+
+- The `bookmarks` is a list of strings containing some kind of bookmark identification e.g \[ `"neo4j-bookmark-transaction:1"`, `"neo4j-bookmark-transaction:2"`\].
+
+- The `db` specifies the database name for multi-database to select where the transaction takes place.
+`null` denotes the server-side configured default database.
+Removed after bolt 4.3
+
+- `extra` contains additional options.
+Introduced in bolt 4.4
+
+
+
+- `db` as above.
+Default: `null`.
+
+- The `imp_user` specifies the impersonated user for the purposes of resolving their home database.
+`null` denotes no impersonation (execution takes place as the current user).
+Default: `null`.
+
+
+**Detail messages:**
+
+No detail messages should be returned.
+
+**Valid summary messages:**
+
+- `SUCCESS`
+
+- `IGNORED`
+
+- `FAILURE`
+
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+ROUTE {routing} [bookmarks] {extra}
+```
+
+Example **v4.4+**
+
+Example **v4.4+**
+
+Copied!
+
+```bolt hljs
+ROUTE {"address": "x.example.com:9001", "policy": "example_policy_routing_context", "region": "example_region_routing_context"} ["neo4j-bookmark-transaction:1", "neo4j-bookmark-transaction:2"] {"db": "example_database", "imp_user": "bob"}
+```
+
+Example **v4.3**
+
+Example **v4.3**
+
+Copied!
+
+```bolt hljs
+ROUTE {"address": "x.example.com:7687"} [] null
+```
+
+#### Server response `SUCCESS`
+
+A `SUCCESS` message response indicates that the client is permitted to exchange further messages.
+The following fields are defined for inclusion in the `SUCCESS` metadata:
+
+- `rt::Dictionary(ttl::Integer, db::String, servers::List<Dictionary(addresses::List<String>, role::String)>)`, the current routing table.
+
+
+
+- `ttl::Integer` specifies for how many seconds this routing table should be considered valid.
+
+- `db::String` identifies the database for which this routing table applies.
+Introduced in bolt 4.4
+
+- `servers` have three elements of the type `Dictionary(addresses::List<String>, role::String)`, where `role` is one of `"ROUTE"`, `"READ"`, `"WRITE"` for exactly one entry each.
+
+
+Example **v4.4+**
+
+Example **v4.4+**
+
+Copied!
+
+```bolt hljs
+SUCCESS {
+    "rt": {"ttl": 1000,
+           "db": "foo",
+           "servers": [{"addresses": ["localhost:9001"], "role": "ROUTE"},\
+                       {"addresses": ["localhost:9010", "localhost:9012"], "role": "READ"},\
+                       {"addresses": ["localhost:9020", "localhost:9022"], "role": "WRITE"}]}
+}
+```
+
+Example **v4.3**
+
+Example **v4.3**
+
+Copied!
+
+```bolt hljs
+SUCCESS {
+    "rt": {"ttl": 1000,
+           "servers": [{"addresses": ["localhost:9001"], "role": "ROUTE"},\
+                       {"addresses": ["localhost:9010", "localhost:9012"], "role": "READ"},\
+                       {"addresses": ["localhost:9020", "localhost:9022"], "role": "WRITE"}]}
+}
+```
+
+#### Server message `IGNORED`
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+#### Server message `FAILURE`
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v4.3** \- **v5.6**
+
+Example **v4.3** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Summary message `SUCCESS`
+
+The `SUCCESS` message indicates that the corresponding request has succeeded as intended.
+It may contain metadata relating to the outcome.
+Metadata keys are described in the section of this document relating to the message that began the exchange.
+
+**Signature:** `70`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+metadata::Dictionary
+```
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+SUCCESS {metadata}
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+SUCCESS {"example": "see specific message for server response metadata"}
+```
+
+### Summary message `IGNORED`
+
+The `IGNORED` message indicates that the corresponding request has not been carried out.
+
+**Signature:** `7E`
+
+**Fields:** No fields.
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+Example
+
+Example
+
+Copied!
+
+```bolt hljs
+IGNORED
+```
+
+### Summary message `FAILURE`
+
+**Signature:** `7F`
+
+Fields:
+
+Fields:
+
+Copied!
+
+```bolt hljs
+metadata::Dictionary
+```
+
+The following fields are defined in the metadata:
+
+- `message::String` \- the human readable description of the failure.
+
+- `code::String` \- the neo4j code identifying the failure.
+Removed after bolt 5.6
+
+- `neo4j_code::String` \- the neo4j code identifying the failure.
+Introduced in bolt 5.7
+
+- `gql_status::String` \- the GQL status which identifies the error. This should be used in favor of `neo4j_code`.
+See more about [GQL-status notification object](https://neo4j.com/docs/status-codes/current/notifications/#gqlstatus-notification-object).
+Introduced in bolt 5.7
+
+- `description::String` \- describes the failure represented by `gql_status`.
+Introduced in bolt 5.7
+
+- `diagnostic_record::Dictionary` \- contains fields for helping diagnosing the status. Omitted when content is default.
+Introduced in bolt 5.7
+
+
+
+- `OPERATION::String` \- GQL standard field.
+Default: `""`
+
+- `OPERATION_CODE::String` \- GQL standard field.
+Default: `"0"`
+
+- `CURRENT_SCHEMA::String` \- GQL standard field.
+Default: `"/"`
+
+- `_classification::String?` \- classifies the failure.
+
+
+- `cause:Dictionary(message::String, gql_status::String, description::String, diagnostic_record::Dictionary, cause::Dictionary?)?` \- the inner cause of the error. This fields provides more specific details and context about the failure. Introduced in bolt 5.7
+
+
+|     |     |
+| --- | --- |
+|  | The `diagnostic_record` field can contain extra and undocumented entries.<br>This information can be important for diagnosing failures. |
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+FAILURE {metadata}
+```
+
+Example **v5.7+**
+
+Example **v5.7+**
+
+Copied!
+
+```bolt hljs
+FAILURE {"gql_status": "01N00", "message": "old message you have failed something", "description": "default condition - default subcondition. Message", "neo4j_code": "Example.Failure.Code", "diagnostic_record": {"_classification": "CLIENT_ERROR"}}
+```
+
+Example **v1** \- **v5.6**
+
+Example **v1** \- **v5.6**
+
+Copied!
+
+```bolt hljs
+FAILURE {"code": "Example.Failure.Code", "message": "example failure"}
+```
+
+### Detail message `RECORD`
+
+A `RECORD` message carries a sequence of values corresponding to a single entry in a result.
+
+**Signature:** `71`
+
+These messages are currently only ever received in response to a `PULL` ( `PULL_ALL` in **v1**, **v2**, and **v3**) message and will always be followed by a summary message.
+
+#### Examples
+
+Synopsis
+
+Synopsis
+
+Copied!
+
+```bolt hljs
+RECORD [data]
+```
+
+Example 1
+
+Example 1
+
+Copied!
+
+```bolt hljs
+RECORD ["1", "2", "3"]
+```
+
+Example 2
+
+Example 2
+
+Copied!
+
+```bolt hljs
+RECORD [{"point": [1, 2]}, "example_data", 123]
+```
+
+## Summary of changes per version
+
+The sections below list the changes of messages compared to the previous version.
+Please also check for changes in [Structure Semantics](https://neo4j.com/docs/bolt/current/bolt/structure-semantics/#structure-summary).
+
+### Version 5.8
+
+- Introduce connection hint `ssr.enabled`
+
+- Introduce `advertised_address` as response metadata of `LOGON`
+
+- `SUCCESS` message of begin transaction messages ( `BEGIN` or `RUN`) contains resolved home database as `db`.
+
+
+### Version 5.7
+
+- `FAILURE` message was changed to have `gql_status`, `description`, `diagnostic_record` and `cause`.
+`code` was renamed to `neo4j_code`.
+
+
+### Version 5.6
+
+- `SUCCESS` messages that contain a `notifications` field were changed to have a field `statuses` instead.
+
+
+
+- [`SUCCESS` on `PULL`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-discard-success)
+
+- [`SUCCESS` on `DISCARD`](https://neo4j.com/docs/bolt/current/bolt/message/#messages-discard-success)
+
+
+### Version 5.5
+
+|     |     |
+| --- | --- |
+|  | Unsupported (and undocumented 😏) protocol version<br>Version 5.5 was only ever released in some drivers, but has a flawed design.<br>No Neo4j server will negotiate this protocol version. |
+
+### Version 5.4
+
+- A new message `TELEMETRY` is added.
+
+
+### Version 5.3
+
+- A new field `bolt_agent` is added to the `HELLO` message’s `extra` dictionary.
+
+
+### Version 5.2
+
+- `HELLO`, `BEGIN` and `RUN` messages now accept notifications options `notifications_minimum_severity` and `notifications_disabled_categories`.
+
+
+### Version 5.1
+
+- `HELLO` message no longer accepts authentication.
+
+- `LOGON` message has been added and accepts authentication.
+
+- `LOGOFF` message has been added.
+
+
+### Version 5
+
+- No changes from version 4.4
+
+
+### Version 4.4
+
+- The `db` parameter within the `ROUTE` message is migrated into a dedicated dictionary named `extra`.
+
+- An `imp_user` parameter is added to the meta fields within `ROUTE`, `RUN` and `BEGIN` messages respectively.
+
+
+### Version 4.3
+
+- `NOOP` chunks may now be transmitted in all connection states when a connection remains in idle for extended periods of time while the server is busy processing a request.
+
+- An additional hints dictionary is added to the metadata property of the `SUCCESS` structure transmitted in response to the `HELLO` command in order to provide optional configuration hints to drivers.
+
+- A new message `ROUTE` to query the routing table is added.
+
+
+### Version 4.2
+
+No changes compared to version 4.1.
+
+### Version 4.1
+
+- The `HELLO` message, defines the sub-field `routing::Dictionary(address::String)` to indicate if server side routing should be performed and can include routing context data.
+
+- Support for `NOOP` chunk (empty chunk).
+Both server and client should support this.
+
+
+### Version 4.0
+
+- `DISCARD_ALL` message renamed to `DISCARD` and introduced new fields.
+
+- `PULL_ALL` message renamed to `PULL` and introduced new fields.
+
+- The `BEGIN` message now have a field `db::String` to specify a database name.
+
+- The `RUN` message now have a field `db::String` to specify a database name.
+
+- **Explicit Transaction** ( `BEGIN+RUN`) can now get a server response with a `SUCCESS` and metadata key `qid` (query identification).
+
+- The `DISCARD` message can now discard an arbitrary number of records.
+New fields `n` and `qid`.
+
+- The `DISCARD` message can now get a server response with a `SUCCESS` and metadata key `has_more`.
+
+- The `PULL` message can now fetch an arbitrary number of records.
+New fields `n` and `qid`.
+
+- The `PULL` message can now get a server response with a `SUCCESS` and metadata key `has_more`.
+
+
+### Version 3
+
+- The `INIT` request message is replaced with `HELLO` message.
+
+- The `ACK_FAILURE` request message is removed.
+Use `RESET` message instead.
+
+- Added `extra::Dictionary` field to `RUN` message.
+
+- Added `extra::Dictionary` field to `BEGIN` message.
+
+- New `HELLO` request message.
+
+- New `GOODBYE` request message.
+
+- New `BEGIN` request message.
+
+- New `COMMIT` request message.
+
+- New `ROLLBACK` request message.
+
+- New `RESET` request message.
+
+
+### Version 2
+
+No changes compared to version 1.
+
+[iframe](https://consentcdn.cookiebot.com/sdk/bc-v4.min.html)![Cookiebot session tracker icon loaded](https://imgsct.cookiebot.com/1.gif?dgi=0c2ea320-7217-4e6b-91f2-77765fc83255)

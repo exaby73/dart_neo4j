@@ -10,3 +10,8 @@ scripts:
     command: dart test
     runInPackages:
       - packages/dart_packstream
+
+  test:bolt:
+    command: dart test
+    runInPackages:
+      - packages/dart_bolt

@@ -2,14 +2,14 @@ part of '../ps_data_type.dart';
 
 /// Registry for Structure types that allows consumer libraries to register
 /// their structure implementations.
-class StructureRegistry {
-  static final Map<int, StructureFactory> _factories = {};
+class PsStructureRegistry {
+  static final Map<int, PsStructureFactory> _factories = {};
 
   /// Registers a structure factory for a given tag byte.
   ///
   /// [tagByte] must be between 0 and 127 (inclusive).
   /// [factory] is a function that creates a Structure from the given values.
-  static void register(int tagByte, StructureFactory factory) {
+  static void register(int tagByte, PsStructureFactory factory) {
     if (tagByte < 0 || tagByte > 127) {
       throw ArgumentError('Tag byte must be between 0 and 127, got: $tagByte');
     }
@@ -24,7 +24,7 @@ class StructureRegistry {
   /// Creates a Structure from the given tag byte and values.
   ///
   /// Throws [ArgumentError] if no factory is registered for the tag byte.
-  static Structure createStructure(int tagByte, List<PsDataType> values) {
+  static PsStructure createStructure(int tagByte, List<PsDataType> values) {
     final factory = _factories[tagByte];
     if (factory == null) {
       throw ArgumentError(
@@ -42,7 +42,7 @@ class StructureRegistry {
 }
 
 /// Function type for creating Structure instances from parsed values.
-typedef StructureFactory = Structure Function(List<PsDataType> values);
+typedef PsStructureFactory = PsStructure Function(List<PsDataType> values);
 
 /// Abstract base class for PackStream structures.
 ///
@@ -53,12 +53,12 @@ typedef StructureFactory = Structure Function(List<PsDataType> values);
 /// This class provides the infrastructure for creating PackStream-compatible
 /// structures that consumer libraries can extend to implement domain-specific
 /// structures like Node, Relationship, etc.
-abstract class Structure extends PsDataType<List<PsDataType>, List<Object?>> {
+abstract class PsStructure extends PsDataType<List<PsDataType>, List<Object?>> {
   /// Creates a new Structure with the given number of fields, tag byte, and values.
   ///
   /// [numberOfFields] must be between 0 and 15 (inclusive) as per PackStream spec.
   /// [tagByte] must be between 0 and 127 (inclusive).
-  Structure(this.numberOfFields, this.tagByte, this.values) {
+  PsStructure(this.numberOfFields, this.tagByte, this.values) {
     if (numberOfFields < 0 || numberOfFields > 15) {
       throw ArgumentError(
         'Number of fields must be between 0 and 15, got: $numberOfFields',
@@ -137,17 +137,17 @@ abstract class Structure extends PsDataType<List<PsDataType>, List<Object?>> {
   /// Creates a Structure from the given tag byte and parsed field values.
   ///
   /// This is used internally by the parsing logic and by the registry system.
-  static Structure createFromParsedValues(
+  static PsStructure createFromParsedValues(
     int tagByte,
     List<PsDataType> values,
   ) {
-    return StructureRegistry.createStructure(tagByte, values);
+    return PsStructureRegistry.createStructure(tagByte, values);
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    if (other is! Structure) return false;
+    if (other is! PsStructure) return false;
     if (runtimeType != other.runtimeType) return false;
     return numberOfFields == other.numberOfFields &&
         tagByte == other.tagByte &&
@@ -177,7 +177,7 @@ abstract class Structure extends PsDataType<List<PsDataType>, List<Object?>> {
   /// to PackStream types. The field names are used for documentation/debugging
   /// but are not serialized as structures don't store field names.
   /// [structureType] is used to look up the appropriate factory in the registry.
-  static Structure fromDartValues(
+  static PsStructure fromDartValues(
     List<(String, dynamic)> fields,
     Type structureType,
   ) {

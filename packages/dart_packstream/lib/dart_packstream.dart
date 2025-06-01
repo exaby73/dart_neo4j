@@ -113,6 +113,6 @@ export 'src/ps_data_type.dart' show PsList;
 export 'src/ps_data_type.dart' show PsDictionary;
 
 // Export structure-related classes
-export 'src/ps_data_type.dart' show Structure;
-export 'src/ps_data_type.dart' show StructureRegistry;
-export 'src/ps_data_type.dart' show StructureFactory;
+export 'src/ps_data_type.dart' show PsStructure;
+export 'src/ps_data_type.dart' show PsStructureRegistry;
+export 'src/ps_data_type.dart' show PsStructureFactory;

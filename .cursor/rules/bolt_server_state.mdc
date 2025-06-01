@@ -1,0 +1,387 @@
+---
+description: 
+globs: packages/dart_bolt/**/*.dart
+alwaysApply: false
+---
+This website uses cookies
+
+We use cookies to offer you a better browsing experience, analyze site traffic, personalize content and serve targeted ads.  Learn about how we use cookies and how you can control them in [Cookie Settings](https://neo4j.com/privacy-policy/cookies/). By using our site. you consent to our use of cookies.
+
+[Accept Cookies](javascript:void(0)) [Use necessary cookies only](javascript:void(0))
+
+[Skip to content](https://neo4j.com/docs/bolt/current/bolt/server-state/#skip-to-content "Skip to content")
+
+[Go to docs home page](https://neo4j.com/docs)
+
+[Raise an issue](https://github.com/neo4j-drivers/docs-bolt/issues/new/?title=Docs%20Feedback%20modules/ROOT/pages/bolt/server-state.adoc%20(ref:%20main)&body=%3E%20Do%20not%20include%20confidential%20information,%20personal%20data,%20sensitive%20data,%20or%20other%20regulated%20data.)
+
+# Bolt Protocol server state specification
+
+For the server, each connection using the Bolt Protocol will occupy one of several states throughout its lifetime.
+
+This state is used to determine what actions may be undertaken by the client.
+Each server state specification corresponds to a message specification with the same version.
+
+For a summary of all available server state transitions in each version of the Bolt Protocol, see the Appendix pages.
+
+## Server states
+
+Each **connection** maintained by a Bolt server will occupy one of several states throughout its lifetime.
+This state is used to determine what actions may be undertaken by the client.
+
+| State | Logic state | Description |
+| --- | --- | --- |
+| [`DISCONNECTED`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-disconnected) | X | no socket connection |
+| [`DEFUNCT`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-defunct) | X | the socket connection is permanently closed |
+| [`NEGOTIATION`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-negotiation) |  | protocol handshake is completed successfully; ready to accept a `HELLO` message |
+| [`AUTHENTICATION`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-negotiation) |  | `HELLO` or `LOGOFF` message accepted; ready to accept a `LOGON` message |
+| [`READY`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-ready) |  | ready to accept a `RUN` message |
+| [`STREAMING`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-streaming) |  | **Auto-commit Transaction**, a result is available for streaming from the server |
+| [`TX_READY`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-tx-ready) |  | **Explicit Transaction**, ready to accept a `RUN` message |
+| [`TX_STREAMING`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-tx-streaming) |  | **Explicit Transaction**, a result is available for streaming from the server |
+| [`FAILED`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-failed) |  | a connection is in a temporarily unusable state |
+| [`INTERRUPTED`](https://neo4j.com/docs/bolt/current/bolt/server-state/#server-interrupted) |  | the server got an `<INTERRUPT>` signal |
+
+### Server state `DISCONNECTED`
+
+No **socket connection** has yet been established.
+This is the initial state and exists only in a logical sense prior to the socket being opened.
+
+#### Transitions from `DISCONNECTED`
+
+- Bolt handshake completed successfully to `NEGOTIATION`
+
+- Bolt handshake did not complete successfully to `DEFUNCT`
+
+
+### Server state `NEGOTIATION`
+
+After a new **protocol connection** has been established and handshake has been completed successfully, the server enters the `NEGOTIATION` state.
+The connection has not yet been authenticated and permits only one transition, through successful initialization using the `HELLO` message, into the `AUTHENTICATION` state.
+
+#### Transitions from `NEGOTIATION`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `HELLO` to `AUTHENTICATION` or `DEFUNCT`
+
+
+### Server state `AUTHENTICATION`
+
+Connection has been established and metadata has been sent back from the `HELLO` message or a `LOGOFF` message was received whilst in ready state.
+Ready to accept a `LOGON` message with authentication information.
+
+#### Transitions from `NEGOTIATION`
+
+- `LOGON` to `READY` or `DEFUNCT`
+
+
+#### Transitions from `READY`
+
+- `LOGOFF` to `AUTHENTICATION`
+
+
+### Server state `DEFUNCT`
+
+This is not strictly a connection state, but is instead a logical state that exists after a connection has been closed.
+When `DEFUNCT`, a connection is permanently not usable.
+This may arise due to a graceful shutdown or can occur after an unrecoverable error or protocol violation.
+Clients and servers should clear up any resources associated with a connection on entering this state, including closing any open sockets.
+This is a terminal state on which no further transitions may be carried out.
+The `<DISCONNECT>` signal will set the connection in the `DEFUNCT` server state.
+
+### Server state `READY`
+
+The `READY` state can handle the request messages `RUN` and `BEGIN` and receive a query.
+
+#### Transitions from `READY`
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `RUN` to `STREAMING` or `FAILED`
+
+- `BEGIN` to `TX_READY` or `FAILED` (v3+)
+
+- `LOGOFF` to `AUTHENTICATION` (v5.1+)
+
+- `TELEMETRY` to `READY` (v5.4+)
+
+
+### Server state `STREAMING`
+
+When `STREAMING`, a result is available for streaming from server to client.
+This result must be fully consumed or discarded by a client before the server can re-enter the `READY` state and allow any further queries to be executed.
+
+#### Transitions from `STREAMING`
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `PULL` to `READY`, `FAILED`, or `STREAMING`
+
+- `DISCARD` to `READY`, `FAILED`, or `STREAMING`
+
+
+In v1, v2 and v3, the following transitions are possible:
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `PULL_ALL` to `READY` or `FAILED`
+
+- `DISCARD_ALL` to `READY` or `FAILED`
+
+
+| State | New state | Response |
+| --- | --- | --- |
+| `STREAMING` | `READY` | `SUCCESS {"has_more": false}` or `SUCCESS {}` |
+| `STREAMING` | `FAILED` | `FAILURE {}` |
+| `STREAMING` | `STREAMING` | `SUCCESS {"has_more": true}` |
+
+Table 1. Request message `DISCARD` state transitions
+
+| State | New state | Response |
+| --- | --- | --- |
+| `STREAMING` | `READY` | \[ `RECORD` …\] `SUCCESS` `{"has_more": false}` or `SUCCESS {}` |
+| `STREAMING` | `FAILED` | \[ `RECORD` …\] `FAILURE {}` |
+| `STREAMING` | `STREAMING` | \[ `RECORD` …\] `SUCCESS {"has_more": true}` |
+
+Table 2. Request message `PULL` state transitions
+
+| State | New state | Response |
+| --- | --- | --- |
+| `STREAMING` | `READY` | \`SUCCESS {} |
+| `STREAMING` | `FAILED` | `FAILURE {}` |
+
+Table 3. Request message `DISCARD_ALL` state transitions in v1, v2, and v3 only
+
+| State | New state | Response |
+| --- | --- | --- |
+| `STREAMING` | `READY` | \[ `RECORD` …\] `SUCCESS {}` |
+| `STREAMING` | `FAILED` | \[ `RECORD` …\] `FAILURE {}` |
+
+Table 4. Request message `PULL_ALL` state transitions in v1. v2 and v3 only
+
+### Server state `TX_READY`
+
+#### Transitions from `TX_READY`
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `RUN` to `TX_STREAMING` or `FAILED`
+
+- `COMMIT` to `READY` or `FAILED`
+
+- `ROLLBACK` to `READY` or `FAILED`
+
+
+| State | New state | Response |
+| --- | --- | --- |
+| `TX_READY` | `TX_STREAMING` | `SUCCESS {"qid": id::Integer}` |
+| `TX_READY` | `FAILED` | `FAILURE{}` |
+
+Table 5. Request message `RUN` state transitions
+
+|     |     |
+| --- | --- |
+|  | The `TX_READY` server state does not exist in v1 or v2. |
+
+### Server state `TX_STREAMING`
+
+When `TX_STREAMING`, a result is available for streaming from server to client.
+This result must be fully consumed or discarded by a client before the server can transition to the `TX_READY` state.
+
+#### Transitions from `TX_STREAMING`
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `RUN` to `TX_STREAMING` or `FAILED`
+
+- `PULL` to `TX_READY`, `FAILED` or `TX_STREAMING`
+
+- `DISCARD` to `TX_READY`, `FAILED` or `TX_STREAMING`
+
+
+| State | New state | Response |
+| --- | --- | --- |
+| `TX_STREAMING` | `TX_STREAMING` | `SUCCESS {"qid": id::Integer}` |
+| `TX_STREAMING` | `FAILED` | `FAILURE{}` |
+
+Table 6. Request message `RUN` state transitions
+
+| State | New state | Response |
+| --- | --- | --- |
+| `TX_STREAMING` | `TX_READY` or `TX_STREAMING` if there are other streams open | `SUCCESS {"has_more": false}` or `SUCCESS {}` |
+| `TX_STREAMING` | `FAILED` | `FAILURE {}` |
+| `TX_STREAMING` | `TX_STREAMING` | `SUCCESS {"has_more": true}` |
+
+Table 7. Request message `DISCARD` state transitions
+
+| State | New state | Response |
+| --- | --- | --- |
+| `TX_STREAMING` | `TX_READY` or `TX_STREAMING` if there are other streams open | \[ `RECORD` …\] `SUCCESS {"has_more": false}` or `SUCCESS {}` |
+| `TX_STREAMING` | `FAILED` | \[ `RECORD` …\] `FAILURE {}` |
+| `TX_STREAMING` | `TX_STREAMING` | \[ `RECORD` …\] `SUCCESS {"has_more": true}` |
+
+Table 8. Request messages `PULL` state transitions
+
+|     |     |
+| --- | --- |
+|  | The `TX_STREAMING` server state does not exist in v1 or v2. |
+
+### Server state `FAILED`
+
+When `FAILED`, a connection is in a temporarily unusable state.
+This is generally as the result of encountering a recoverable error.
+This mode ensures that only one failure can exist at a time, preventing cascading issues from batches of work.
+
+#### Transitions from `FAILED`
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `RUN` to `FAILED`
+
+- `PULL` to `FAILED`
+
+- `DISCARD` to `FAILED`
+
+
+_In v1 and v2, in a `FAILED` state, no more work will be processed until the failure has been acknowledged by `ACK_FAILURE` or until the connection has been `RESET`._
+
+In v1 and v2, the following transitions are possible:
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `ACK_FAILURE` to `READY` or `DEFUNCT`
+
+
+### Server state `INTERRUPTED`
+
+This state occurs between the server receiving the jump-ahead `<INTERRUPT>` and the queued `RESET` message, (the `RESET` message triggers an `<INTERRUPT>`).
+Most incoming messages are ignored when the server are in an `INTERRUPTED` state, with the exception of the `RESET` that allows transition back to READY.
+The `<INTERRUPT>` signal will set the connection in the `INTERRUPTED` server state.
+
+#### Transitions from `INTERRUPTED`
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `RUN` to `INTERRUPTED`
+
+- `DISCARD` to `INTERRUPTED`
+
+- `PULL` to `INTERRUPTED`
+
+- `BEGIN` to `INTERRUPTED`
+
+- `COMMIT` to `INTERRUPTED`
+
+- `ROLLBACK` to `INTERRUPTED`
+
+- `RESET` to `READY` or `DEFUNCT`
+
+
+In v1 and v2, the following transitions are possible:
+
+- `<INTERRUPT>` to `INTERRUPTED`
+
+- `<DISCONNECT>` to `DEFUNCT`
+
+- `RUN` to `INTERRUPTED`
+
+- `DISCARD_ALL` to `INTERRUPTED`
+
+- `PULL_ALL` to `INTERRUPTED`
+
+- `ACK_FAILURE` to `INTERRUPTED`
+
+- `RESET` to `READY` or `DEFUNCT`
+
+
+## Summary of changes per version
+
+The sections below list the changes compared to the previous version.
+
+### Version 5.2
+
+No changes compared to version 5.1.
+
+### Version 5.1
+
+- `CONNECTED` state has been renamed to `NEGOTIATION` but still accepts the `HELLO` message.
+
+- `HELLO` message no longer accepts authentication and transitions to the `AUTHENTICATION` state from `NEGOTIATION`.
+
+- `LOGON` message has been added.
+It can only be received in the `AUTHENTICATION` state and transitions to the `READY` state.
+
+- `LOGOFF` message has be added.
+It can only be received in the `READY` state and transitions to the `AUTHENTICATION` state.
+
+
+### Version 5.0
+
+No changes compared to version 4.4.
+
+### Version 4.4
+
+No changes compared to version 4.3.
+
+### Version 4.3
+
+- The `ROUTE` message was added.
+It can only be received in the `READY` state and causes no transition.
+
+
+### Version 4.2
+
+No changes compared to version 4.1.
+
+### Version 4.1
+
+No changes compared to version 4.0.
+
+### Version 4.0
+
+Compared to version 3 the `RUN`, `PULL` and `DISCARD` now can re-enter `STREAMING` or `TX_STREAMING`.
+The server state transitions are using the updated set of messages defined in [Bolt Protocol Message Specification Version 4.0](https://neo4j.com/docs/bolt/current/bolt/message/#messages-summary-40).
+
+### Version 3
+
+Compared to version 2 there are new server states:
+
+- `TX_READY`
+
+- `TX_STREAMING`
+These states are introduced to handle the concept of **Explicit Transaction**.
+The server state transitions are using the updated set of messages defined in [Bolt Protocol Message Specification Version 3](https://neo4j.com/docs/bolt/current/bolt/message/#messages-summary-3).
+
+
+### Version 2
+
+No changes compared to version 1.
+
+AI search
+
+###### AI SEARCH
+
+Ask Neo4j anything or try one of the following questions
+
+How do I model data for a graph database?How do I use the MATCH clause in Cypher?How do I use Neo4j with Python?How do I get started with graph algorithms?
+
+This is an experimental AI chatbot. All information should be verified.
+
+[iframe](https://consentcdn.cookiebot.com/sdk/bc-v4.min.html)![Cookiebot session tracker icon loaded](https://imgsct.cookiebot.com/1.gif?dgi=0c2ea320-7217-4e6b-91f2-77765fc83255)

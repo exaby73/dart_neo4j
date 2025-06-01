@@ -176,18 +176,18 @@ sealed class PsDataType<T, D> {
   }
 
   /// Parses a Structure from PackStream bytes.
-  static Structure _parseStructure(int markerByte, ByteData bytes) {
+  static PsStructure _parseStructure(int markerByte, ByteData bytes) {
     final numberOfFields = markerByte - 0xB0;
-    
+
     if (bytes.lengthInBytes < 2) {
-      throw ArgumentError('Structure bytes must contain at least marker and tag byte');
+      throw ArgumentError(
+        'Structure bytes must contain at least marker and tag byte',
+      );
     }
 
     final tagByte = bytes.getUint8(1);
     if (tagByte < 0 || tagByte > 127) {
-      throw ArgumentError(
-        'Tag byte must be between 0 and 127, got: $tagByte',
-      );
+      throw ArgumentError('Tag byte must be between 0 and 127, got: $tagByte');
     }
 
     final values = <PsDataType>[];
@@ -216,7 +216,7 @@ sealed class PsDataType<T, D> {
       offset += fieldSize;
     }
 
-    return Structure.createFromParsedValues(tagByte, values);
+    return PsStructure.createFromParsedValues(tagByte, values);
   }
 
   /// Converts this PackStream data type to a [ByteData] representation.

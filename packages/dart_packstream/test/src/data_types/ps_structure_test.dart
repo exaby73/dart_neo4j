@@ -4,12 +4,12 @@ import 'package:dart_packstream/src/ps_data_type.dart';
 import 'package:test/test.dart';
 
 // Example concrete Structure implementation for testing
-class TestStructure extends Structure {
+class TestStructure extends PsStructure {
   TestStructure(List<PsDataType> values) : super(values.length, 0x4E, values);
 }
 
 // Another test structure
-class TestStructureWithDifferentTag extends Structure {
+class TestStructureWithDifferentTag extends PsStructure {
   TestStructureWithDifferentTag(List<PsDataType> values)
     : super(values.length, 0x52, values);
 }
@@ -17,21 +17,21 @@ class TestStructureWithDifferentTag extends Structure {
 void main() {
   group('StructureRegistry', () {
     setUp(() {
-      StructureRegistry.clear();
+      PsStructureRegistry.clear();
     });
 
     tearDown(() {
-      StructureRegistry.clear();
+      PsStructureRegistry.clear();
     });
 
     test('register and create structure', () {
-      StructureRegistry.register(0x4E, (values) => TestStructure(values));
+      PsStructureRegistry.register(0x4E, (values) => TestStructure(values));
 
-      expect(StructureRegistry.isRegistered(0x4E), isTrue);
-      expect(StructureRegistry.isRegistered(0x52), isFalse);
+      expect(PsStructureRegistry.isRegistered(0x4E), isTrue);
+      expect(PsStructureRegistry.isRegistered(0x52), isFalse);
 
       final values = [PsDataType.fromValue(42), PsDataType.fromValue('test')];
-      final structure = StructureRegistry.createStructure(0x4E, values);
+      final structure = PsStructureRegistry.createStructure(0x4E, values);
 
       expect(structure, isA<TestStructure>());
       expect(structure.tagByte, equals(0x4E));
@@ -41,20 +41,23 @@ void main() {
 
     test('register throws on invalid tag byte', () {
       expect(
-        () => StructureRegistry.register(-1, (values) => TestStructure(values)),
+        () =>
+            PsStructureRegistry.register(-1, (values) => TestStructure(values)),
         throwsA(isA<ArgumentError>()),
       );
 
       expect(
-        () =>
-            StructureRegistry.register(128, (values) => TestStructure(values)),
+        () => PsStructureRegistry.register(
+          128,
+          (values) => TestStructure(values),
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
 
     test('createStructure throws when no factory registered', () {
       expect(
-        () => StructureRegistry.createStructure(0x4E, []),
+        () => PsStructureRegistry.createStructure(0x4E, []),
         throwsA(
           isA<ArgumentError>().having(
             (e) => e.message,
@@ -66,38 +69,38 @@ void main() {
     });
 
     test('unregister removes factory', () {
-      StructureRegistry.register(0x4E, (values) => TestStructure(values));
-      expect(StructureRegistry.isRegistered(0x4E), isTrue);
+      PsStructureRegistry.register(0x4E, (values) => TestStructure(values));
+      expect(PsStructureRegistry.isRegistered(0x4E), isTrue);
 
-      StructureRegistry.unregister(0x4E);
-      expect(StructureRegistry.isRegistered(0x4E), isFalse);
+      PsStructureRegistry.unregister(0x4E);
+      expect(PsStructureRegistry.isRegistered(0x4E), isFalse);
     });
 
     test('clear removes all factories', () {
-      StructureRegistry.register(0x4E, (values) => TestStructure(values));
-      StructureRegistry.register(
+      PsStructureRegistry.register(0x4E, (values) => TestStructure(values));
+      PsStructureRegistry.register(
         0x52,
         (values) => TestStructureWithDifferentTag(values),
       );
 
-      expect(StructureRegistry.isRegistered(0x4E), isTrue);
-      expect(StructureRegistry.isRegistered(0x52), isTrue);
+      expect(PsStructureRegistry.isRegistered(0x4E), isTrue);
+      expect(PsStructureRegistry.isRegistered(0x52), isTrue);
 
-      StructureRegistry.clear();
+      PsStructureRegistry.clear();
 
-      expect(StructureRegistry.isRegistered(0x4E), isFalse);
-      expect(StructureRegistry.isRegistered(0x52), isFalse);
+      expect(PsStructureRegistry.isRegistered(0x4E), isFalse);
+      expect(PsStructureRegistry.isRegistered(0x52), isFalse);
     });
   });
 
   group('Structure', () {
     setUp(() {
-      StructureRegistry.clear();
-      StructureRegistry.register(0x4E, (values) => TestStructure(values));
+      PsStructureRegistry.clear();
+      PsStructureRegistry.register(0x4E, (values) => TestStructure(values));
     });
 
     tearDown(() {
-      StructureRegistry.clear();
+      PsStructureRegistry.clear();
     });
 
     test('creates structure with correct properties', () {
@@ -215,7 +218,7 @@ void main() {
     });
 
     test('fromPackStreamBytes throws when no factory registered', () {
-      StructureRegistry.clear(); // Remove all factories
+      PsStructureRegistry.clear(); // Remove all factories
 
       final bytes = ByteData(2);
       bytes.setUint8(0, 0xB0); // Structure with 0 fields
@@ -281,14 +284,14 @@ void main() {
 }
 
 // Helper class for testing invalid state
-class TestStructureWithInvalidState extends Structure {
+class TestStructureWithInvalidState extends PsStructure {
   TestStructureWithInvalidState() : super(2, 0x4E, [PsDataType.fromValue(1)]) {
     // This should be allowed for testing purposes - we want to test the toByteData validation
   }
 }
 
 // Helper class for testing invalid number of fields
-class TestStructureWithInvalidNumberOfFields extends Structure {
+class TestStructureWithInvalidNumberOfFields extends PsStructure {
   TestStructureWithInvalidNumberOfFields()
     : super(-1, 0x4E, []); // Invalid: -1 fields
 }
