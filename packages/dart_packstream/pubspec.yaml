@@ -1,0 +1,17 @@
+name: dart_packstream
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+resolution: workspace
+repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_packstream
+
+environment:
+  sdk: ^3.7.0
+
+# Add regular dependencies here.
+dependencies:
+  collection: ^1.19.1
+  # path: ^1.8.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.24.0

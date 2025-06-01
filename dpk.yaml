@@ -1,0 +1,12 @@
+catalog:
+  resolution: workspace
+  repository: https://github.com/exaby73/dart_neo4j/tree/main/DPK_PACKAGE_PATH
+
+  environment:
+    sdk: ^3.7.0
+
+scripts:
+  test:packstream:
+    command: dart test
+    runInPackages:
+      - packages/dart_packstream

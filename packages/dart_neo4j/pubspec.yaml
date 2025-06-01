@@ -1,0 +1,16 @@
+name: dart_neo4j
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+resolution: workspace
+repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_neo4j
+
+environment:
+  sdk: ^3.7.0
+
+# Add regular dependencies here.
+dependencies:
+  # path: ^1.8.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.24.0

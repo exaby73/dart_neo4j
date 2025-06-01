@@ -1,0 +1,9 @@
+name: _
+
+environment:
+  sdk: ^3.7.0
+
+workspace:
+  - packages/dart_bolt
+  - packages/dart_neo4j
+  - packages/dart_packstream
