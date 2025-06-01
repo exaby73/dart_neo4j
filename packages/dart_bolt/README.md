@@ -39,7 +39,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  dart_bolt: ^1.0.0
+  dart_bolt: <latest_version>
 ```
 
 ## Usage
