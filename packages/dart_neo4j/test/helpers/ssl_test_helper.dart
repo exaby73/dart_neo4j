@@ -38,11 +38,25 @@ class SSLTestHelper {
       );
     }
 
-    // Read the CA certificate
-    final caCertBytes = await caCertFile.readAsBytes();
+    // Debug: print file info before reading
+    try {
+      final stat = await caCertFile.stat();
+      print('CA cert file stats: mode=${stat.mode.toRadixString(8)}, size=${stat.size}, accessed=${stat.accessed}, modified=${stat.modified}');
+    } catch (e) {
+      print('Error getting CA cert file stats: $e');
+    }
 
-    // Set up the global SSL context to trust our CA
-    SecurityContext.defaultContext.setTrustedCertificatesBytes(caCertBytes);
+    // Read the CA certificate
+    try {
+      final caCertBytes = await caCertFile.readAsBytes();
+      print('Successfully read CA certificate (${caCertBytes.length} bytes)');
+
+      // Set up the global SSL context to trust our CA
+      SecurityContext.defaultContext.setTrustedCertificatesBytes(caCertBytes);
+    } catch (e) {
+      print('Error reading CA certificate file: $e');
+      rethrow;
+    }
   }
 
   /// Creates a custom SecurityContext with our CA certificate.
@@ -103,6 +117,23 @@ class SSLTestHelper {
     final caCertFile = File(caCertPath);
     final exists = await caCertFile.exists();
     print('SSL certificates check: path=$caCertPath, exists=$exists');
+    
+    // Debug: print directory contents and permissions
+    final sslDir = Directory(sslCertsPath);
+    if (await sslDir.exists()) {
+      print('SSL certificates directory exists, listing contents:');
+      try {
+        await for (final entity in sslDir.list()) {
+          final stat = await entity.stat();
+          print('  ${entity.path} - type: ${stat.type}, mode: ${stat.mode.toRadixString(8)}, size: ${stat.size}');
+        }
+      } catch (e) {
+        print('  Error listing directory: $e');
+      }
+    } else {
+      print('SSL certificates directory does not exist: $sslCertsPath');
+    }
+    
     return exists;
   }
 }
