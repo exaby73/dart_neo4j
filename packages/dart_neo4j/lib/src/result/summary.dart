@@ -170,10 +170,12 @@ class ResultSummary {
       final updates = <String>[];
       if (nodesCreated > 0) updates.add('nodes-created: $nodesCreated');
       if (nodesDeleted > 0) updates.add('nodes-deleted: $nodesDeleted');
-      if (relationshipsCreated > 0)
+      if (relationshipsCreated > 0) {
         updates.add('relationships-created: $relationshipsCreated');
-      if (relationshipsDeleted > 0)
+      }
+      if (relationshipsDeleted > 0) {
         updates.add('relationships-deleted: $relationshipsDeleted');
+      }
       if (propertiesSet > 0) updates.add('properties-set: $propertiesSet');
       if (labelsAdded > 0) updates.add('labels-added: $labelsAdded');
       if (labelsRemoved > 0) updates.add('labels-removed: $labelsRemoved');
