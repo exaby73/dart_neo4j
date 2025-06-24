@@ -171,7 +171,10 @@ services:
           cp /scripts/generate-ssl-certs.sh /tmp/ &&
           chmod +x /tmp/generate-ssl-certs.sh &&
           sed -i 's|CERTS_DIR=\"\$$SCRIPT_DIR/../ssl-certs\"|CERTS_DIR=\"/ssl-certs\"|' /tmp/generate-ssl-certs.sh &&
-          /tmp/generate-ssl-certs.sh
+          /tmp/generate-ssl-certs.sh &&
+          echo 'Setting world-readable permissions for CI compatibility...' &&
+          chmod -R 755 /ssl-certs &&
+          chmod 644 /ssl-certs/*.pem /ssl-certs/*.cnf /ssl-certs/*.csr /ssl-certs/*.srl 2>/dev/null || true
         else
           echo 'SSL certificates already exist, skipping generation.' &&
           ls -la /ssl-certs/
