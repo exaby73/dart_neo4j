@@ -96,6 +96,16 @@ jobs:
           echo "Basic Neo4j instances are ready!"
           echo "SSL containers status checked - Dart tests will handle SSL connectivity."
 
+      - name: Debug SSL certificate paths
+        run: |
+          echo "GitHub workspace: ${{ github.workspace }}"
+          echo "Current directory: $(pwd)"
+          echo "SSL_CERTS_PATH will be: ${{ github.workspace }}/ssl-certs"
+          echo "Checking if SSL certs exist at expected path:"
+          ls -la ${{ github.workspace }}/ssl-certs/ || echo "SSL certs not found at workspace path"
+          echo "Checking if SSL certs exist at relative path:"
+          ls -la ssl-certs/ || echo "SSL certs not found at relative path"
+
       - name: Run dart_neo4j integration tests
         run: dpk run test:neo4j
         env:

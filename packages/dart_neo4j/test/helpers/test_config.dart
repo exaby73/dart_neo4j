@@ -155,7 +155,9 @@ class TestConfig {
       client.close();
 
       final isAvailable = response.statusCode == 200;
-      print('SSL Neo4j available: $isAvailable (status: ${response.statusCode})');
+      print(
+        'SSL Neo4j available: $isAvailable (status: ${response.statusCode})',
+      );
       return isAvailable;
     } catch (e) {
       print('SSL Neo4j availability check failed: $e');
@@ -166,7 +168,9 @@ class TestConfig {
   /// Checks if the self-signed SSL Neo4j instance is available
   static Future<bool> isSelfSignedAvailable() async {
     try {
-      print('Checking self-signed SSL Neo4j availability at: $selfSignedHealthUrl');
+      print(
+        'Checking self-signed SSL Neo4j availability at: $selfSignedHealthUrl',
+      );
       final client = HttpClient();
       final request = await client.getUrl(Uri.parse(selfSignedHealthUrl));
       request.headers.set('Accept', 'application/json');
@@ -176,7 +180,9 @@ class TestConfig {
       client.close();
 
       final isAvailable = response.statusCode == 200;
-      print('Self-signed SSL Neo4j available: $isAvailable (status: ${response.statusCode})');
+      print(
+        'Self-signed SSL Neo4j available: $isAvailable (status: ${response.statusCode})',
+      );
       return isAvailable;
     } catch (e) {
       print('Self-signed SSL Neo4j availability check failed: $e');
