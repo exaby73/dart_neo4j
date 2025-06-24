@@ -137,6 +137,235 @@ final driver = Neo4jDriver.create(
 );
 ```
 
+## SSL/TLS Encryption
+
+The driver supports encrypted connections to Neo4j using SSL/TLS. This is essential for production environments and recommended for any network communication.
+
+### SSL URI Schemes
+
+The driver supports different levels of SSL validation:
+
+- **`bolt+s://`** - Full SSL with certificate validation (recommended for production)
+- **`bolt+ssc://`** - SSL with self-signed certificate support (useful for development/testing)
+- **`neo4j+s://`** - Routing with full SSL certificate validation
+- **`neo4j+ssc://`** - Routing with self-signed certificate support
+
+### Production SSL Setup
+
+For production environments with properly signed certificates:
+
+```dart
+final driver = Neo4jDriver.create(
+  'bolt+s://your-neo4j-server.com:7687',
+  auth: BasicAuth('username', 'password'),
+);
+```
+
+### Custom CA Certificate
+
+If your Neo4j server uses a custom Certificate Authority (CA), you can configure the driver to trust it:
+
+```dart
+final driver = Neo4jDriver.create(
+  'bolt+s://your-neo4j-server.com:7687',
+  auth: BasicAuth('username', 'password'),
+  config: DriverConfig(
+    customCACertificatePath: '/path/to/your/ca-certificate.pem',
+  ),
+);
+```
+
+### Custom Certificate Validation
+
+For advanced SSL scenarios, you can provide a custom certificate validator:
+
+```dart
+bool validateCertificate(X509Certificate cert) {
+  // Custom validation logic
+  // Check issuer, validity period, fingerprint, etc.
+  if (cert.issuer.contains('YourCompany')) {
+    final now = DateTime.now();
+    return now.isAfter(cert.startValidity) && now.isBefore(cert.endValidity);
+  }
+  return false;
+}
+
+final driver = Neo4jDriver.create(
+  'bolt+s://your-neo4j-server.com:7687',
+  auth: BasicAuth('username', 'password'),
+  config: DriverConfig(
+    certificateValidator: validateCertificate,
+  ),
+);
+```
+
+### Development with Self-Signed Certificates
+
+For development environments using self-signed certificates:
+
+```dart
+// Option 1: Use bolt+ssc:// scheme (allows self-signed certificates)
+final driver = Neo4jDriver.create(
+  'bolt+ssc://localhost:7687',
+  auth: BasicAuth('neo4j', 'password'),
+);
+
+// Option 2: Use custom certificate validator for specific certificates
+final driver = Neo4jDriver.create(
+  'bolt+s://localhost:7687',
+  auth: BasicAuth('neo4j', 'password'),
+  config: DriverConfig(
+    certificateValidator: (cert) {
+      // Accept certificates from localhost with specific issuer
+      return cert.subject.contains('localhost') && 
+             cert.issuer.contains('Development CA');
+    },
+  ),
+);
+```
+
+### SSL Configuration Examples
+
+#### Enterprise Production Setup
+
+```dart
+final driver = Neo4jDriver.create(
+  'neo4j+s://cluster.neo4j.company.com:7687',
+  auth: BasicAuth('app_user', 'secure_password'),
+  config: DriverConfig(
+    maxConnectionPoolSize: 50,
+    connectionTimeout: Duration(seconds: 10),
+    // Uses system's trusted CA certificates
+  ),
+);
+```
+
+#### Internal Infrastructure with Custom CA
+
+```dart
+final driver = Neo4jDriver.create(
+  'bolt+s://internal-neo4j.company.local:7687',
+  auth: BasicAuth('service_account', 'service_password'),
+  config: DriverConfig(
+    customCACertificatePath: '/etc/ssl/certs/company-ca.pem',
+    connectionTimeout: Duration(seconds: 5),
+  ),
+);
+```
+
+#### Development Environment
+
+```dart
+final driver = Neo4jDriver.create(
+  'bolt+ssc://dev-neo4j:7687',
+  auth: BasicAuth('neo4j', 'dev_password'),
+  config: DriverConfig(
+    connectionTimeout: Duration(seconds: 30), // Longer timeout for dev
+  ),
+);
+```
+
+### SSL Best Practices
+
+1. **Always use SSL in production**: Never transmit credentials or sensitive data over unencrypted connections.
+
+2. **Validate certificates properly**: Use `bolt+s://` with proper CA certificates rather than accepting all certificates.
+
+3. **Rotate certificates regularly**: Ensure your certificate validation doesn't break when certificates are renewed.
+
+4. **Environment-specific configuration**: Use different SSL configurations for development, staging, and production:
+
+   ```dart
+   // Environment-based configuration
+   final isProduction = Platform.environment['ENVIRONMENT'] == 'production';
+   
+   final driver = Neo4jDriver.create(
+     isProduction 
+       ? 'bolt+s://prod-neo4j.company.com:7687'
+       : 'bolt+ssc://localhost:7687',
+     auth: BasicAuth(
+       Platform.environment['NEO4J_USER'] ?? 'neo4j',
+       Platform.environment['NEO4J_PASSWORD'] ?? 'password',
+     ),
+     config: DriverConfig(
+       customCACertificatePath: isProduction 
+         ? '/etc/ssl/certs/company-ca.pem'
+         : null,
+     ),
+   );
+   ```
+
+5. **Certificate pinning for high security**: For maximum security, implement certificate pinning:
+
+   ```dart
+   final driver = Neo4jDriver.create(
+     'bolt+s://secure-neo4j.company.com:7687',
+     auth: BasicAuth('username', 'password'),
+     config: DriverConfig(
+       certificateValidator: (cert) {
+         // Pin to specific certificate fingerprint
+         const expectedFingerprint = [0x12, 0x34, 0x56, /* ... */];
+         return cert.sha1.toString() == expectedFingerprint.toString();
+       },
+     ),
+   );
+   ```
+
+### Troubleshooting SSL Issues
+
+#### Certificate Verification Failed
+
+```dart
+try {
+  await driver.verifyConnectivity();
+} on ServiceUnavailableException catch (e) {
+  if (e.message.contains('CERTIFICATE_VERIFY_FAILED')) {
+    print('SSL certificate verification failed. Check:');
+    print('1. Certificate is valid and not expired');
+    print('2. Hostname matches certificate subject');
+    print('3. CA certificate is trusted');
+    print('4. Consider using bolt+ssc:// for self-signed certificates');
+  }
+}
+```
+
+#### Common SSL Configuration Issues
+
+1. **Hostname mismatch**: Ensure the hostname in your URI matches the certificate's subject or SAN.
+2. **Expired certificates**: Check certificate validity dates.
+3. **Missing CA certificate**: For custom CAs, ensure the CA certificate is provided.
+4. **Wrong port**: SSL-enabled Neo4j typically runs on a different port than unencrypted.
+
+#### Testing SSL Configuration
+
+```dart
+// Test SSL connectivity before using in application
+Future<void> testSSLConnection() async {
+  final driver = Neo4jDriver.create(
+    'bolt+s://your-server:7687',
+    auth: BasicAuth('username', 'password'),
+  );
+  
+  try {
+    await driver.verifyConnectivity();
+    print('SSL connection successful!');
+    
+    final session = driver.session();
+    try {
+      final result = await session.run('RETURN "SSL Test" AS message');
+      final record = await result.single();
+      print('Query result: ${record['message']}');
+    } finally {
+      await session.close();
+    }
+  } catch (e) {
+    print('SSL connection failed: $e');
+  } finally {
+    await driver.close();
+  }
+}
+```
+
 ## Sessions
 
 Sessions are the primary interface for executing queries. They can be configured for different access modes and databases.
@@ -512,6 +741,8 @@ final driver = Neo4jDriver.create(
     maxTransactionRetryTime: Duration(seconds: 30),
     encrypted: true,
     trustAllCertificates: false, // Only for development!
+    customCACertificatePath: '/path/to/ca-cert.pem',
+    certificateValidator: (cert) => validateCustomCert(cert),
   ),
 );
 ```
@@ -523,6 +754,8 @@ final driver = Neo4jDriver.create(
 - **`maxTransactionRetryTime`**: Maximum time to retry transient failures (default: 30s)
 - **`encrypted`**: Force encryption on/off (null = auto-detect from URI)
 - **`trustAllCertificates`**: Accept self-signed certificates (default: false)
+- **`customCACertificatePath`**: Path to custom CA certificate file for SSL validation
+- **`certificateValidator`**: Custom function to validate SSL certificates
 
 ## Best Practices
 

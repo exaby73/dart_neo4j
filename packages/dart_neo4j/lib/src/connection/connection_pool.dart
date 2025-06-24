@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:dart_bolt/dart_bolt.dart' as bolt;
 import 'package:dart_neo4j/src/auth/auth_token.dart';
@@ -24,6 +25,12 @@ class ConnectionPoolConfig {
   /// The time to wait for a connection to become available.
   final Duration acquisitionTimeout;
 
+  /// Path to custom CA certificate file for SSL connections.
+  final String? customCACertificatePath;
+
+  /// Custom certificate validator function.
+  final bool Function(X509Certificate)? certificateValidator;
+
   /// Creates a new connection pool configuration.
   const ConnectionPoolConfig({
     this.maxSize = 100,
@@ -31,6 +38,8 @@ class ConnectionPoolConfig {
     this.connectionTimeout = const Duration(seconds: 30),
     this.maxIdleTime = const Duration(minutes: 30),
     this.acquisitionTimeout = const Duration(seconds: 60),
+    this.customCACertificatePath,
+    this.certificateValidator,
   });
 
   @override
@@ -261,6 +270,8 @@ class ConnectionPool {
       _uri,
       _auth,
       connectionTimeout: _config.connectionTimeout,
+      customCACertificatePath: _config.customCACertificatePath,
+      certificateValidator: _config.certificateValidator,
     );
 
     try {

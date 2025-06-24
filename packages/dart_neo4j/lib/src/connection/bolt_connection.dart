@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dart_bolt/dart_bolt.dart';
@@ -30,7 +31,7 @@ class BoltConnection {
   StreamSubscription<Uint8List>? _dataSubscription;
 
   /// Creates a new Bolt connection.
-  BoltConnection(this._uri, this._auth, {Duration? connectionTimeout}) {
+  BoltConnection(this._uri, this._auth, {Duration? connectionTimeout, String? customCACertificatePath, bool Function(X509Certificate)? certificateValidator}) {
     _socket = BoltSocket(
       BoltSocketConfig(
         host: _uri.host,
@@ -38,6 +39,8 @@ class BoltConnection {
         encrypted: _uri.encrypted,
         allowSelfSignedCertificates: _uri.allowsSelfSignedCertificates,
         connectionTimeout: connectionTimeout ?? const Duration(seconds: 30),
+        customCACertificatePath: customCACertificatePath,
+        certificateValidator: certificateValidator,
       ),
     );
     _protocol = BoltProtocol(_socket);

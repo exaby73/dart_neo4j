@@ -94,6 +94,85 @@ services:
     networks:
       - neo4j-network
 
+  # SSL-enabled single Neo4j instance for bolt+s:// testing
+  neo4j-single-ssl:
+    image: neo4j:2025.05-enterprise
+    container_name: neo4j-single-ssl
+    ports:
+      - 7478:7474
+      - 7694:7687
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_mode=SINGLE
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+      # SSL Configuration
+      - NEO4J_server_bolt_tls__level=REQUIRED
+      - NEO4J_server_ssl_policy_bolt_enabled=true
+      - NEO4J_server_ssl_policy_bolt_base__directory=/var/lib/neo4j/certificates/bolt
+      - NEO4J_server_ssl_policy_bolt_private__key=server-key.pem
+      - NEO4J_server_ssl_policy_bolt_public__certificate=server-cert.pem
+      - NEO4J_server_ssl_policy_bolt_client__auth=NONE
+    volumes:
+      - neo4j-single-ssl-data:/data
+      - neo4j-single-ssl-logs:/logs
+      - ./ssl-certs:/var/lib/neo4j/certificates/bolt
+    networks:
+      - neo4j-network
+    depends_on:
+      - ssl-cert-generator
+
+  # Self-signed SSL Neo4j instance for bolt+ssc:// testing
+  neo4j-self-signed:
+    image: neo4j:2025.05-enterprise
+    container_name: neo4j-self-signed
+    ports:
+      - 7479:7474
+      - 7695:7687
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_mode=SINGLE
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+      # Self-signed SSL Configuration
+      - NEO4J_server_bolt_tls__level=REQUIRED
+      - NEO4J_server_ssl_policy_bolt_enabled=true
+      - NEO4J_server_ssl_policy_bolt_base__directory=/var/lib/neo4j/certificates/bolt
+      - NEO4J_server_ssl_policy_bolt_private__key=server-key.pem
+      - NEO4J_server_ssl_policy_bolt_public__certificate=self-signed-cert.pem
+      - NEO4J_server_ssl_policy_bolt_client__auth=NONE
+    volumes:
+      - neo4j-self-signed-data:/data
+      - neo4j-self-signed-logs:/logs
+      - ./ssl-certs:/var/lib/neo4j/certificates/bolt
+    networks:
+      - neo4j-network
+    depends_on:
+      - ssl-cert-generator
+
+  # SSL Certificate Generator Service
+  ssl-cert-generator:
+    image: alpine:latest
+    container_name: ssl-cert-generator
+    volumes:
+      - ./ssl-certs:/ssl-certs
+      - ./scripts:/scripts:ro
+    command: >
+      sh -c "
+        apk add --no-cache openssl bash &&
+        if [ ! -f /ssl-certs/server-cert.pem ]; then
+          echo 'Generating SSL certificates...' &&
+          cd /scripts &&
+          ./generate-ssl-certs.sh
+        else
+          echo 'SSL certificates already exist, skipping generation.'
+        fi
+      "
+    networks:
+      - neo4j-network
+
 volumes:
   neo4j-single-data:
   neo4j-single-logs:
@@ -103,6 +182,10 @@ volumes:
   neo4j-core2-logs:
   neo4j-core3-data:
   neo4j-core3-logs:
+  neo4j-single-ssl-data:
+  neo4j-single-ssl-logs:
+  neo4j-self-signed-data:
+  neo4j-self-signed-logs:
 
 networks:
   neo4j-network:

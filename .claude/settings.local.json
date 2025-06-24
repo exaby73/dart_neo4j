@@ -6,7 +6,9 @@
       "Bash(dart test:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "WebFetch(domain:api.dart.dev)",
+      "WebFetch(domain:api.flutter.dev)"
     ],
     "deny": []
   }

@@ -22,6 +22,18 @@ class BoltSocketConfig {
   /// Connection timeout duration.
   final Duration connectionTimeout;
 
+  /// Path to custom CA certificate file for SSL connections.
+  /// If provided, this CA certificate will be trusted for SSL connections.
+  final String? customCACertificatePath;
+
+  /// Custom CA certificate bytes for SSL connections.
+  /// If provided, this CA certificate will be trusted for SSL connections.
+  final List<int>? customCACertificateBytes;
+
+  /// Custom certificate validator function.
+  /// If provided, this function will be called to validate certificates.
+  final bool Function(X509Certificate)? certificateValidator;
+
   /// Creates a new Bolt socket configuration.
   const BoltSocketConfig({
     required this.host,
@@ -29,6 +41,9 @@ class BoltSocketConfig {
     this.encrypted = false,
     this.allowSelfSignedCertificates = false,
     this.connectionTimeout = const Duration(seconds: 30),
+    this.customCACertificatePath,
+    this.customCACertificateBytes,
+    this.certificateValidator,
   });
 }
 
@@ -99,14 +114,31 @@ class BoltSocket {
       Socket socket;
       
       if (_config.encrypted) {
+        // Prepare SSL context with custom CA if provided
+        SecurityContext? context;
+        if (_config.customCACertificatePath != null) {
+          context = SecurityContext();
+          context.setTrustedCertificates(_config.customCACertificatePath!);
+        } else if (_config.customCACertificateBytes != null) {
+          context = SecurityContext();
+          context.setTrustedCertificatesBytes(_config.customCACertificateBytes!);
+        }
+
+        // Determine certificate validation callback
+        bool Function(X509Certificate)? badCertCallback;
+        if (_config.certificateValidator != null) {
+          badCertCallback = _config.certificateValidator;
+        } else if (_config.allowSelfSignedCertificates) {
+          badCertCallback = (certificate) => true;
+        }
+
         // Create secure socket
         socket = await SecureSocket.connect(
           _config.host,
           _config.port,
           timeout: _config.connectionTimeout,
-          onBadCertificate: _config.allowSelfSignedCertificates 
-              ? (certificate) => true 
-              : null,
+          context: context,
+          onBadCertificate: badCertCallback,
         );
       } else {
         // Create regular socket

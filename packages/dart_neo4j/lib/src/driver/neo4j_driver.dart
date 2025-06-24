@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dart_neo4j/src/auth/auth_token.dart';
 import 'package:dart_neo4j/src/connection/connection_pool.dart';
 import 'package:dart_neo4j/src/driver/uri_parser.dart';
@@ -23,6 +25,14 @@ class DriverConfig {
   /// Whether to trust all certificates (for development only).
   final bool trustAllCertificates;
 
+  /// Path to custom CA certificate file for SSL connections.
+  /// If provided, this CA certificate will be trusted for SSL connections.
+  final String? customCACertificatePath;
+
+  /// Custom certificate validator function.
+  /// If provided, this function will be called to validate certificates.
+  final bool Function(X509Certificate)? certificateValidator;
+
   /// Creates a new driver configuration.
   const DriverConfig({
     this.maxConnectionPoolSize = 100,
@@ -30,6 +40,8 @@ class DriverConfig {
     this.maxTransactionRetryTime = const Duration(seconds: 30),
     this.encrypted,
     this.trustAllCertificates = false,
+    this.customCACertificatePath,
+    this.certificateValidator,
   });
 
   @override
@@ -113,6 +125,8 @@ class _Neo4jDriverImpl implements Neo4jDriver {
           ConnectionPoolConfig(
             maxSize: _config.maxConnectionPoolSize,
             connectionTimeout: _config.connectionTimeout,
+            customCACertificatePath: _config.customCACertificatePath,
+            certificateValidator: _config.certificateValidator,
           ),
         );
 

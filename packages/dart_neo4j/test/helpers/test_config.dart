@@ -15,8 +15,15 @@ class TestConfig {
   static String get clusterUser => Platform.environment['NEO4J_CLUSTER_USER'] ?? 'neo4j';
   static String get clusterPassword => Platform.environment['NEO4J_CLUSTER_PASSWORD'] ?? 'password';
   
+  // SSL configuration (for bolt+s:// and bolt+ssc:// tests)
+  static String get boltSslUri => Platform.environment['NEO4J_SSL_URI'] ?? 'bolt+s://localhost:7694';
+  static String get boltSelfSignedUri => Platform.environment['NEO4J_SELF_SIGNED_URI'] ?? 'bolt+ssc://localhost:7695';
+  static String get sslUser => Platform.environment['NEO4J_SSL_USER'] ?? 'neo4j';
+  static String get sslPassword => Platform.environment['NEO4J_SSL_PASSWORD'] ?? 'password';
+  
   // Auth token for tests
   static BasicAuth get auth => BasicAuth(singleUser, singlePassword);
+  static BasicAuth get sslAuth => BasicAuth(sslUser, sslPassword);
   
   // Test configuration
   static int get testTimeout => int.tryParse(Platform.environment['TEST_TIMEOUT'] ?? '30000') ?? 30000;
@@ -26,6 +33,8 @@ class TestConfig {
   // Docker service URLs for health checks
   static String get singleHealthUrl => 'http://localhost:7474/';
   static String get clusterHealthUrl => 'http://localhost:7475/';
+  static String get sslHealthUrl => 'http://localhost:7478/';
+  static String get selfSignedHealthUrl => 'http://localhost:7479/';
   
   /// Checks if the single Neo4j instance is available
   static Future<bool> isSingleAvailable() async {
@@ -101,5 +110,71 @@ class TestConfig {
   /// Waits for Neo4j cluster to be ready (alias for consistency) 
   static Future<void> waitForNeo4jCluster({Duration timeout = const Duration(seconds: 60)}) async {
     await waitForCluster(timeout: timeout);
+  }
+  
+  /// Checks if the SSL Neo4j instance is available
+  static Future<bool> isSslAvailable() async {
+    try {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(sslHealthUrl));
+      request.headers.set('Accept', 'application/json');
+      
+      final response = await request.close();
+      await response.drain();
+      client.close();
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /// Checks if the self-signed SSL Neo4j instance is available
+  static Future<bool> isSelfSignedAvailable() async {
+    try {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(selfSignedHealthUrl));
+      request.headers.set('Accept', 'application/json');
+      
+      final response = await request.close();
+      await response.drain();
+      client.close();
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /// Waits for the SSL Neo4j instance to be ready
+  static Future<void> waitForSsl({Duration timeout = const Duration(seconds: 30)}) async {
+    final deadline = DateTime.now().add(timeout);
+    
+    while (DateTime.now().isBefore(deadline)) {
+      if (await isSslAvailable()) {
+        // Give SSL instance extra time to initialize certificates
+        await Future.delayed(const Duration(seconds: 3));
+        return;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    
+    throw Exception('Neo4j SSL instance did not become available within $timeout');
+  }
+  
+  /// Waits for the self-signed SSL Neo4j instance to be ready
+  static Future<void> waitForSelfSigned({Duration timeout = const Duration(seconds: 30)}) async {
+    final deadline = DateTime.now().add(timeout);
+    
+    while (DateTime.now().isBefore(deadline)) {
+      if (await isSelfSignedAvailable()) {
+        // Give self-signed SSL instance extra time to initialize certificates
+        await Future.delayed(const Duration(seconds: 3));
+        return;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    
+    throw Exception('Neo4j self-signed SSL instance did not become available within $timeout');
   }
 }
