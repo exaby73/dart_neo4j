@@ -58,7 +58,7 @@ jobs:
       # Integration Tests Setup
       - name: Start Neo4j container for basic tests
         run: |
-          docker-compose up -d neo4j-single --wait
+          docker compose up -d neo4j-single --wait
           # Verify basic connectivity
           echo "Testing neo4j-single connection..."
           until docker exec neo4j-single cypher-shell -u neo4j -p password 'RETURN "ready" as status' 2>/dev/null; do
@@ -83,7 +83,7 @@ jobs:
 
       - name: Cleanup Neo4j containers
         if: always()
-        run: docker-compose down
+        run: docker compose down
 
       - name: Upload test results on failure
         if: failure()

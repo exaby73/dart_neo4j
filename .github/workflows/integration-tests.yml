@@ -42,14 +42,14 @@ jobs:
 
       - name: Start Neo4j containers
         run: |
-          docker-compose up -d --wait
+          docker compose up -d --wait
         env:
           COMPOSE_HTTP_TIMEOUT: 120
 
       - name: Verify Neo4j containers are healthy
         run: |
           echo "Checking container status..."
-          docker-compose ps
+          docker compose ps
 
           # Verify basic connectivity to each instance
           echo "Testing neo4j-single connection..."
@@ -88,7 +88,7 @@ jobs:
 
       - name: Stop Neo4j containers
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
 
       - name: Upload test results on failure
         if: failure()
