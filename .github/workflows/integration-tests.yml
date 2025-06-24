@@ -58,25 +58,14 @@ jobs:
             sleep 5
           done
 
-          echo "Testing neo4j-single-ssl connection..."
-          until docker exec neo4j-single-ssl cypher-shell -u neo4j -p password 'RETURN "ssl" as instance' 2>/dev/null; do
-            echo "Waiting for neo4j-single-ssl..."
-            sleep 5
-          done
-
-          echo "Testing neo4j-self-signed connection..."
-          until docker exec neo4j-self-signed cypher-shell -u neo4j -p password 'RETURN "self-signed" as instance' 2>/dev/null; do
-            echo "Waiting for neo4j-self-signed..."
-            sleep 5
-          done
-
           echo "Testing cluster connectivity..."
           until docker exec neo4j-core1 cypher-shell -u neo4j -p password 'CALL dbms.cluster.overview() YIELD role RETURN role' 2>/dev/null; do
             echo "Waiting for neo4j cluster..."
             sleep 10
           done
 
-          echo "All Neo4j instances are ready!"
+          echo "Basic Neo4j instances are ready!"
+          echo "Note: SSL containers (neo4j-single-ssl, neo4j-self-signed) will be tested by the Dart integration tests."
 
       - name: Set SSL certificates path
         run: echo "SSL_CERTS_PATH=$(pwd)/ssl-certs" >> $GITHUB_ENV
