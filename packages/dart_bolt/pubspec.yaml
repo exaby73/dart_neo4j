@@ -1,6 +1,6 @@
 name: dart_bolt
 description: A Dart library for Bolt protocol implementation.
-version: 0.0.1
+version: 0.0.2
 resolution: workspace
 repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_bolt
 
