@@ -64,8 +64,16 @@ jobs:
             sleep 5
           done
 
+          echo "Checking SSL container status..."
+          docker logs neo4j-single-ssl --tail 10
+          docker logs neo4j-self-signed --tail 10
+          
+          echo "Testing SSL container HTTP interfaces..."
+          curl -f http://localhost:7478/ || echo "SSL container HTTP not ready"
+          curl -f http://localhost:7479/ || echo "Self-signed container HTTP not ready"
+          
           echo "Basic Neo4j instances are ready!"
-          echo "Note: SSL containers (neo4j-single-ssl, neo4j-self-signed) will be tested by the Dart integration tests."
+          echo "SSL containers status checked - Dart tests will handle SSL connectivity."
 
       - name: Run dart_neo4j integration tests
         run: dpk run test:neo4j
