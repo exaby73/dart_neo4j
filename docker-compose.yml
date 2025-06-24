@@ -162,15 +162,19 @@ services:
     volumes:
       - ./ssl-certs:/ssl-certs
       - ./scripts:/scripts:ro
+    working_dir: /ssl-certs
     command: >
       sh -c "
         apk add --no-cache openssl bash &&
         if [ ! -f /ssl-certs/server-cert.pem ]; then
           echo 'Generating SSL certificates...' &&
-          cd /scripts &&
-          ./generate-ssl-certs.sh
+          cp /scripts/generate-ssl-certs.sh /tmp/ &&
+          chmod +x /tmp/generate-ssl-certs.sh &&
+          sed -i 's|CERTS_DIR=\"\$$SCRIPT_DIR/../ssl-certs\"|CERTS_DIR=\"/ssl-certs\"|' /tmp/generate-ssl-certs.sh &&
+          /tmp/generate-ssl-certs.sh
         else
-          echo 'SSL certificates already exist, skipping generation.'
+          echo 'SSL certificates already exist, skipping generation.' &&
+          ls -la /ssl-certs/
         fi
       "
     networks:
