@@ -6,6 +6,11 @@ catalog:
     sdk: ^3.7.0
 
 scripts:
+  analyze:
+    command: dart analyze
+    runInPackages:
+      - packages/*
+
   test:packstream:
     command: dart test
     runInPackages:
@@ -15,3 +20,19 @@ scripts:
     command: dart test
     runInPackages:
       - packages/dart_bolt
+
+  test:neo4j:
+    command: dart test -j 1
+    runInPackages:
+      - packages/dart_neo4j
+
+  test:all:
+    command: |
+      echo "Running Packstream tests"
+      dpk run test:packstream
+
+      echo "Running Bolt tests"
+      dpk run test:bolt
+
+      echo "Running Neo4j tests"
+      dpk run test:neo4j

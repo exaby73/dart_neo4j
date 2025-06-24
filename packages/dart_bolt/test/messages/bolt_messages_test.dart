@@ -16,8 +16,6 @@ void main() {
       test('HELLO message serializes and deserializes correctly', () {
         final hello = BoltMessageFactory.hello(
           userAgent: 'TestApp/1.0.0',
-          username: 'neo4j',
-          password: 'password',
           boltAgent: {'product': 'TestDriver/1.0.0', 'platform': 'Dart'},
         );
 
@@ -123,6 +121,59 @@ void main() {
 
         final bytes = goodbye.toByteData();
         expect(bytes.lengthInBytes, equals(2)); // marker + signature only
+      });
+
+      test('LOGON message serializes and deserializes correctly', () {
+        final logon = BoltMessageFactory.logon(
+          scheme: 'basic',
+          principal: 'neo4j',
+          credentials: 'password',
+        );
+
+        expect(logon.signature, equals(0x6A));
+        expect(logon.isRequest, isTrue);
+        expect(logon.isSummary, isFalse);
+
+        final bytes = logon.toByteData();
+        final parsed =
+            PsDataType.fromPackStreamBytes(bytes) as BoltLogonMessage;
+
+        expect(parsed.signature, equals(0x6A));
+        expect(
+          parsed.auth.dartValue,
+          equals({
+            'scheme': 'basic',
+            'principal': 'neo4j',
+            'credentials': 'password',
+          }),
+        );
+      });
+
+      test('LOGON message with bearer token serializes correctly', () {
+        final logon = BoltMessageFactory.logon(
+          scheme: 'bearer',
+          credentials: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        );
+
+        expect(logon.signature, equals(0x6A));
+        expect(
+          logon.auth.dartValue,
+          equals({
+            'scheme': 'bearer',
+            'credentials': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          }),
+        );
+
+        final bytes = logon.toByteData();
+        final parsed =
+            PsDataType.fromPackStreamBytes(bytes) as BoltLogonMessage;
+
+        expect(parsed.signature, equals(0x6A));
+        expect(parsed.auth.dartValue['scheme'], equals('bearer'));
+        expect(
+          parsed.auth.dartValue['credentials'],
+          equals('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'),
+        );
       });
     });
 

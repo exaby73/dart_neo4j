@@ -82,6 +82,7 @@ void _registerBoltStructures() {
 void _registerBoltMessages() {
   // Request messages
   PsStructureRegistry.register(0x01, BoltHelloMessage.fromValues);
+  PsStructureRegistry.register(0x6A, BoltLogonMessage.fromValues);
   PsStructureRegistry.register(0x10, BoltRunMessage.fromValues);
   PsStructureRegistry.register(0x3F, BoltPullMessage.fromValues);
   PsStructureRegistry.register(0x2F, BoltDiscardMessage.fromValues);

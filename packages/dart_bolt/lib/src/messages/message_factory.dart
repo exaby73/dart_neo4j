@@ -4,13 +4,37 @@ import 'response_messages.dart';
 
 /// Utility class for creating common Bolt messages.
 class BoltMessageFactory {
-  /// Creates a HELLO message with basic authentication.
+  /// Creates a HELLO message for newer protocols (without authentication).
+  ///
+  /// [userAgent] - identifies the client application
+  /// [boltAgent] - identifies the driver (optional)
+  static BoltHelloMessage hello({
+    required String userAgent,
+    Map<String, String>? boltAgent,
+  }) {
+    final extra = <PsString, PsDataType>{
+      PsString('user_agent'): PsString(userAgent),
+    };
+
+    // Add bolt agent if provided
+    if (boltAgent != null) {
+      final agentDict = <PsString, PsDataType>{};
+      boltAgent.forEach((key, value) {
+        agentDict[PsString(key)] = PsString(value);
+      });
+      extra[PsString('bolt_agent')] = PsDictionary(agentDict);
+    }
+
+    return BoltHelloMessage(PsDictionary(extra));
+  }
+
+  /// Creates a HELLO message with basic authentication (legacy protocols).
   ///
   /// [userAgent] - identifies the client application
   /// [username] - username for basic authentication (optional)
   /// [password] - password for basic authentication (optional)
   /// [boltAgent] - identifies the driver (optional)
-  static BoltHelloMessage hello({
+  static BoltHelloMessage helloWithAuth({
     required String userAgent,
     String? username,
     String? password,
@@ -39,6 +63,37 @@ class BoltMessageFactory {
     }
 
     return BoltHelloMessage(PsDictionary(extra));
+  }
+
+  /// Creates a LOGON message for authentication.
+  ///
+  /// [scheme] - authentication scheme ('basic', 'bearer', 'kerberos', 'none')
+  /// [principal] - username or principal for authentication (optional)
+  /// [credentials] - password or token for authentication (optional)
+  /// [realm] - authentication realm (optional)
+  static BoltLogonMessage logon({
+    required String scheme,
+    String? principal,
+    String? credentials,
+    String? realm,
+  }) {
+    final auth = <PsString, PsDataType>{
+      PsString('scheme'): PsString(scheme),
+    };
+
+    if (principal != null) {
+      auth[PsString('principal')] = PsString(principal);
+    }
+
+    if (credentials != null) {
+      auth[PsString('credentials')] = PsString(credentials);
+    }
+
+    if (realm != null) {
+      auth[PsString('realm')] = PsString(realm);
+    }
+
+    return BoltLogonMessage(PsDictionary(auth));
   }
 
   /// Creates a RUN message for executing a Cypher query.
@@ -146,9 +201,7 @@ class BoltMessageFactory {
       extra[PsString('db')] = PsString(db);
     }
 
-    return extra.isEmpty
-        ? BoltBeginMessage()
-        : BoltBeginMessage(PsDictionary(extra));
+    return BoltBeginMessage(PsDictionary(extra));
   }
 
   /// Creates a COMMIT message.

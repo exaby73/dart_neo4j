@@ -1,8 +1,109 @@
 services:
-  neo4j:
-    image: neo4j:2025.05
+  # Single Neo4j instance for bolt:// testing
+  neo4j-single:
+    image: neo4j:2025.05-enterprise
+    container_name: neo4j-single
     ports:
       - 7474:7474
       - 7687:7687
     environment:
       - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_mode=SINGLE
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - neo4j-single-data:/data
+      - neo4j-single-logs:/logs
+    networks:
+      - neo4j-network
+
+  # Neo4j Cluster for neo4j:// routing testing
+  neo4j-core1:
+    image: neo4j:2025.05-enterprise
+    container_name: neo4j-core1
+    ports:
+      - 7475:7474
+      - 7688:7687
+      - 7689:7688
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_causal__clustering_initial__discovery__members=neo4j-core1:5000,neo4j-core2:5000,neo4j-core3:5000
+      - NEO4J_causal__clustering_minimum__core__cluster__size__at__formation=3
+      - NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime=3
+      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
+      - NEO4J_dbms_routing_default__router=SERVER
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - neo4j-core1-data:/data
+      - neo4j-core1-logs:/logs
+    networks:
+      - neo4j-network
+
+  neo4j-core2:
+    image: neo4j:2025.05-enterprise
+    container_name: neo4j-core2
+    ports:
+      - 7476:7474
+      - 7690:7687
+      - 7691:7688
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_causal__clustering_initial__discovery__members=neo4j-core1:5000,neo4j-core2:5000,neo4j-core3:5000
+      - NEO4J_causal__clustering_minimum__core__cluster__size__at__formation=3
+      - NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime=3
+      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
+      - NEO4J_dbms_routing_default__router=SERVER
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - neo4j-core2-data:/data
+      - neo4j-core2-logs:/logs
+    networks:
+      - neo4j-network
+
+  neo4j-core3:
+    image: neo4j:2025.05-enterprise
+    container_name: neo4j-core3
+    ports:
+      - 7477:7474
+      - 7692:7687
+      - 7693:7688
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_dbms_mode=CORE
+      - NEO4J_causal__clustering_initial__discovery__members=neo4j-core1:5000,neo4j-core2:5000,neo4j-core3:5000
+      - NEO4J_causal__clustering_minimum__core__cluster__size__at__formation=3
+      - NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime=3
+      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
+      - NEO4J_dbms_routing_default__router=SERVER
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - neo4j-core3-data:/data
+      - neo4j-core3-logs:/logs
+    networks:
+      - neo4j-network
+
+volumes:
+  neo4j-single-data:
+  neo4j-single-logs:
+  neo4j-core1-data:
+  neo4j-core1-logs:
+  neo4j-core2-data:
+  neo4j-core2-logs:
+  neo4j-core3-data:
+  neo4j-core3-logs:
+
+networks:
+  neo4j-network:
+    driver: bridge

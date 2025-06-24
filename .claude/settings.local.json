@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:neo4j.com)",
+      "Bash(mkdir:*)",
+      "Bash(dart test:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)"
+    ],
+    "deny": []
+  }
+}

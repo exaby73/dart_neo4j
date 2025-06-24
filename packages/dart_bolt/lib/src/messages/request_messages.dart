@@ -265,6 +265,37 @@ class BoltResetMessage extends BoltMessage {
   bool get isDetail => false;
 }
 
+/// LOGON message - performs authentication with credentials.
+/// Signature: 0x6A (newer protocol versions)
+class BoltLogonMessage extends BoltMessage {
+  /// Creates a LOGON message.
+  ///
+  /// [auth] - dictionary containing authentication data (scheme, principal, credentials)
+  BoltLogonMessage(PsDictionary auth) : super(1, 0x6A, [auth]);
+
+  /// Creates a LOGON message from parsed values.
+  factory BoltLogonMessage.fromValues(List<PsDataType> values) {
+    if (values.length != 1) {
+      throw ArgumentError(
+        'LOGON message must have 1 field, got ${values.length}',
+      );
+    }
+    return BoltLogonMessage(values[0] as PsDictionary);
+  }
+
+  /// The authentication data containing scheme, principal, and credentials.
+  PsDictionary get auth => values[0] as PsDictionary;
+
+  @override
+  bool get isRequest => true;
+
+  @override
+  bool get isSummary => false;
+
+  @override
+  bool get isDetail => false;
+}
+
 /// GOODBYE message - closes the connection gracefully.
 /// Signature: 0x02
 class BoltGoodbyeMessage extends BoltMessage {

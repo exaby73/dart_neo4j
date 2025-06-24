@@ -132,3 +132,9 @@ export 'src/messages/message_factory.dart';
 
 // Unified registry
 export 'src/registry.dart';
+
+// Connection and networking
+export 'src/connection/bolt_socket.dart';
+export 'src/connection/bolt_protocol.dart';
+export 'src/connection/connection_state.dart';
+export 'src/connection/connection_exceptions.dart';
