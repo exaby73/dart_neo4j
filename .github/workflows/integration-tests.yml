@@ -114,22 +114,30 @@ jobs:
           echo "Basic Neo4j instances are ready!"
           echo "SSL containers status checked - Dart tests will handle SSL connectivity."
 
-      - name: Verify SSL certificates before tests
+      - name: Fix SSL certificate permissions (Neo4j containers change ownership)
         run: |
           echo "Pre-test verification working directory: $(pwd)"
           echo "Contents of workspace root:"
           ls -la
           
-          if [ ! -d ssl-certs ]; then
+          if [ -d ssl-certs ]; then
+            echo "SSL certificates directory found, checking ownership:"
+            ls -la ssl-certs/ || echo "Cannot list ssl-certs - permission/ownership issue"
+            
+            echo "Fixing ownership and permissions (Neo4j containers changed them):"
+            sudo chown -R runner:docker ssl-certs/
+            sudo chmod 755 ssl-certs/
+            sudo chmod 644 ssl-certs/*
+            
+            echo "Fixed permissions:"
+            ls -la ssl-certs/
+          else
             echo "SSL certificates missing! Re-generating..."
             chmod +x scripts/generate-ssl-certs.sh
             ./scripts/generate-ssl-certs.sh
             chmod 755 ssl-certs
             chmod 644 ssl-certs/*
-            echo "Re-generated certificates:"
-            ls -la ssl-certs/
-          else
-            echo "SSL certificates found:"
+            echo "Generated certificates:"
             ls -la ssl-certs/
           fi
 
