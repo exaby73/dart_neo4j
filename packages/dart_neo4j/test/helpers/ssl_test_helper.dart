@@ -7,17 +7,9 @@ import 'package:dart_neo4j/dart_neo4j.dart';
 class SSLTestHelper {
   /// Path to the project's SSL certificates directory
   static String get sslCertsPath {
-    // Debug: print all SSL-related environment variables
-    print('Platform.environment SSL debug:');
-    print('  SSL_CERTS_PATH: ${Platform.environment['SSL_CERTS_PATH']}');
-    print('  PWD: ${Platform.environment['PWD']}');
-    print('  GITHUB_WORKSPACE: ${Platform.environment['GITHUB_WORKSPACE']}');
-    print('  Directory.current.path: ${Directory.current.path}');
-
     // Use environment variable (set by CI) or fallback to relative path
     final envPath = Platform.environment['SSL_CERTS_PATH'];
     if (envPath != null) {
-      print('Using SSL_CERTS_PATH from environment: $envPath');
       return envPath;
     }
 
@@ -28,7 +20,6 @@ class SSLTestHelper {
       '..',
       'ssl-certs',
     );
-    print('Using fallback SSL certs path: $fallbackPath');
     return fallbackPath;
   }
 
@@ -45,27 +36,11 @@ class SSLTestHelper {
       );
     }
 
-    // Debug: print file info before reading
-    try {
-      final stat = await caCertFile.stat();
-      print(
-        'CA cert file stats: mode=${stat.mode.toRadixString(8)}, size=${stat.size}, accessed=${stat.accessed}, modified=${stat.modified}',
-      );
-    } catch (e) {
-      print('Error getting CA cert file stats: $e');
-    }
-
     // Read the CA certificate
-    try {
-      final caCertBytes = await caCertFile.readAsBytes();
-      print('Successfully read CA certificate (${caCertBytes.length} bytes)');
+    final caCertBytes = await caCertFile.readAsBytes();
 
-      // Set up the global SSL context to trust our CA
-      SecurityContext.defaultContext.setTrustedCertificatesBytes(caCertBytes);
-    } catch (e) {
-      print('Error reading CA certificate file: $e');
-      rethrow;
-    }
+    // Set up the global SSL context to trust our CA
+    SecurityContext.defaultContext.setTrustedCertificatesBytes(caCertBytes);
   }
 
   /// Creates a custom SecurityContext with our CA certificate.
@@ -125,26 +100,6 @@ class SSLTestHelper {
   static Future<bool> areCertificatesAvailable() async {
     final caCertFile = File(caCertPath);
     final exists = await caCertFile.exists();
-    print('SSL certificates check: path=$caCertPath, exists=$exists');
-
-    // Debug: print directory contents and permissions
-    final sslDir = Directory(sslCertsPath);
-    if (await sslDir.exists()) {
-      print('SSL certificates directory exists, listing contents:');
-      try {
-        await for (final entity in sslDir.list()) {
-          final stat = await entity.stat();
-          print(
-            '  ${entity.path} - type: ${stat.type}, mode: ${stat.mode.toRadixString(8)}, size: ${stat.size}',
-          );
-        }
-      } catch (e) {
-        print('  Error listing directory: $e');
-      }
-    } else {
-      print('SSL certificates directory does not exist: $sslCertsPath');
-    }
-
     return exists;
   }
 }

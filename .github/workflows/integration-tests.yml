@@ -42,46 +42,11 @@ jobs:
 
       - name: Generate SSL certificates
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Contents before generation:"
-          ls -la
-          
-          echo "Generating SSL certificates..."
           chmod +x scripts/generate-ssl-certs.sh
           ./scripts/generate-ssl-certs.sh
-          
-          echo "Contents after generation:"
-          ls -la
-          
-          if [ -d ssl-certs ]; then
-            echo "SSL certs directory exists, checking permissions:"
-            ls -ld ssl-certs/
-            echo "Setting explicit permissions for CI:"
-            chmod -v 755 ssl-certs
-            chmod -v 644 ssl-certs/* 2>/dev/null || echo "No files to chmod in ssl-certs"
-            
-            echo "Final permissions after chmod:"
-            ls -la ssl-certs/
-            
-            echo "Testing file access as current user:"
-            whoami
-            id
-            if [ -f ssl-certs/ca-cert.pem ]; then
-              echo "ca-cert.pem exists, trying to read first 3 lines:"
-              head -3 ssl-certs/ca-cert.pem || echo "Failed to read ca-cert.pem"
-            else
-              echo "ca-cert.pem does not exist"
-            fi
-          else
-            echo "ERROR: ssl-certs directory was not created!"
-            echo "Script might have failed. Let's check the script exists:"
-            ls -la scripts/
-          fi
 
       - name: Start Neo4j containers
-        run: |
-          echo "Starting all Neo4j containers..."
-          docker compose up -d
+        run: docker compose up -d
         env:
           COMPOSE_HTTP_TIMEOUT: 120
 
@@ -114,41 +79,15 @@ jobs:
           echo "Basic Neo4j instances are ready!"
           echo "SSL containers status checked - Dart tests will handle SSL connectivity."
 
-      - name: Fix SSL certificate permissions (Neo4j containers change ownership)
+      - name: Fix SSL certificate permissions
         run: |
-          echo "Pre-test verification working directory: $(pwd)"
-          echo "Contents of workspace root:"
-          ls -la
-          
-          if [ -d ssl-certs ]; then
-            echo "SSL certificates directory found, checking ownership:"
-            ls -la ssl-certs/ || echo "Cannot list ssl-certs - permission/ownership issue"
-            
-            echo "Fixing ownership and permissions (Neo4j containers changed them):"
-            sudo chown -R runner:docker ssl-certs/
-            sudo chmod 755 ssl-certs/
-            sudo chmod 644 ssl-certs/*
-            
-            echo "Fixed permissions:"
-            ls -la ssl-certs/
-          else
-            echo "SSL certificates missing! Re-generating..."
-            chmod +x scripts/generate-ssl-certs.sh
-            ./scripts/generate-ssl-certs.sh
-            chmod 755 ssl-certs
-            chmod 644 ssl-certs/*
-            echo "Generated certificates:"
-            ls -la ssl-certs/
-          fi
+          # Neo4j containers change ownership of ssl-certs directory, fix it
+          sudo chown -R runner:docker ssl-certs/
+          sudo chmod 755 ssl-certs/
+          sudo chmod 644 ssl-certs/*
 
       - name: Run dart_neo4j integration tests
-        run: |
-          echo "Test step working directory: $(pwd)"
-          echo "SSL_CERTS_PATH: $SSL_CERTS_PATH"
-          echo "Final check - SSL certs at specified path:"
-          ls -la "$SSL_CERTS_PATH" 2>/dev/null || echo "Directory STILL not found at $SSL_CERTS_PATH"
-          echo "Running tests..."
-          dpk run test:neo4j
+        run: dpk run test:neo4j
         env:
           SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
 
