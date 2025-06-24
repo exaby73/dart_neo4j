@@ -59,9 +59,9 @@ jobs:
           done
 
           echo "Testing cluster connectivity..."
-          until docker exec neo4j-core1 cypher-shell -u neo4j -p password 'CALL dbms.cluster.overview() YIELD role RETURN role' 2>/dev/null; do
+          until docker exec neo4j-core1 cypher-shell -u neo4j -p password 'RETURN "cluster ready" as status' 2>/dev/null; do
             echo "Waiting for neo4j cluster..."
-            sleep 10
+            sleep 5
           done
 
           echo "Basic Neo4j instances are ready!"
