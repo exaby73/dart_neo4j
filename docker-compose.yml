@@ -9,9 +9,10 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_dbms_mode=SINGLE
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_server_cluster_system__database__mode=PRIMARY
+      - NEO4J_initial_server_mode__constraint=PRIMARY
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
     volumes:
       - neo4j-single-data:/data
       - neo4j-single-logs:/logs
@@ -29,15 +30,15 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_dbms_mode=CORE
-      - NEO4J_causal__clustering_initial__discovery__members=neo4j-core1:5000,neo4j-core2:5000,neo4j-core3:5000
-      - NEO4J_causal__clustering_minimum__core__cluster__size__at__formation=3
-      - NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime=3
-      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-      - NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
+      - NEO4J_server_cluster_system__database__mode=PRIMARY
+      - NEO4J_initial_server_mode__constraint=PRIMARY
+      - NEO4J_dbms_cluster_minimum__initial__system__primaries__count=3
+      - NEO4J_internal_db_cluster_raft_minimum__voting__members=3
+      - NEO4J_server_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_server_http_listen__address=0.0.0.0:7474
       - NEO4J_dbms_routing_default__router=SERVER
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
     volumes:
       - neo4j-core1-data:/data
       - neo4j-core1-logs:/logs
@@ -54,15 +55,15 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_dbms_mode=CORE
-      - NEO4J_causal__clustering_initial__discovery__members=neo4j-core1:5000,neo4j-core2:5000,neo4j-core3:5000
-      - NEO4J_causal__clustering_minimum__core__cluster__size__at__formation=3
-      - NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime=3
-      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-      - NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
+      - NEO4J_server_cluster_system__database__mode=PRIMARY
+      - NEO4J_initial_server_mode__constraint=PRIMARY
+      - NEO4J_dbms_cluster_minimum__initial__system__primaries__count=3
+      - NEO4J_internal_db_cluster_raft_minimum__voting__members=3
+      - NEO4J_server_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_server_http_listen__address=0.0.0.0:7474
       - NEO4J_dbms_routing_default__router=SERVER
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
     volumes:
       - neo4j-core2-data:/data
       - neo4j-core2-logs:/logs
@@ -79,15 +80,15 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_dbms_mode=CORE
-      - NEO4J_causal__clustering_initial__discovery__members=neo4j-core1:5000,neo4j-core2:5000,neo4j-core3:5000
-      - NEO4J_causal__clustering_minimum__core__cluster__size__at__formation=3
-      - NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime=3
-      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-      - NEO4J_dbms_connector_http_listen__address=0.0.0.0:7474
+      - NEO4J_server_cluster_system__database__mode=PRIMARY
+      - NEO4J_initial_server_mode__constraint=PRIMARY
+      - NEO4J_dbms_cluster_minimum__initial__system__primaries__count=3
+      - NEO4J_internal_db_cluster_raft_minimum__voting__members=3
+      - NEO4J_server_bolt_listen__address=0.0.0.0:7687
+      - NEO4J_server_http_listen__address=0.0.0.0:7474
       - NEO4J_dbms_routing_default__router=SERVER
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
     volumes:
       - neo4j-core3-data:/data
       - neo4j-core3-logs:/logs
@@ -104,16 +105,17 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_dbms_mode=SINGLE
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_server_cluster_system__database__mode=PRIMARY
+      - NEO4J_initial_server_mode__constraint=PRIMARY
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
       # SSL Configuration
       - NEO4J_server_bolt_tls__level=REQUIRED
-      - NEO4J_server_ssl_policy_bolt_enabled=true
-      - NEO4J_server_ssl_policy_bolt_base__directory=/var/lib/neo4j/certificates/bolt
-      - NEO4J_server_ssl_policy_bolt_private__key=server-key.pem
-      - NEO4J_server_ssl_policy_bolt_public__certificate=server-cert.pem
-      - NEO4J_server_ssl_policy_bolt_client__auth=NONE
+      - NEO4J_dbms_ssl_policy_bolt_enabled=true
+      - NEO4J_dbms_ssl_policy_bolt_base__directory=/var/lib/neo4j/certificates/bolt
+      - NEO4J_dbms_ssl_policy_bolt_private__key=server-key.pem
+      - NEO4J_dbms_ssl_policy_bolt_public__certificate=server-cert.pem
+      - NEO4J_dbms_ssl_policy_bolt_client__auth=NONE
     volumes:
       - neo4j-single-ssl-data:/data
       - neo4j-single-ssl-logs:/logs
@@ -133,16 +135,17 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_dbms_mode=SINGLE
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_server_cluster_system__database__mode=PRIMARY
+      - NEO4J_initial_server_mode__constraint=PRIMARY
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
       # Self-signed SSL Configuration
       - NEO4J_server_bolt_tls__level=REQUIRED
-      - NEO4J_server_ssl_policy_bolt_enabled=true
-      - NEO4J_server_ssl_policy_bolt_base__directory=/var/lib/neo4j/certificates/bolt
-      - NEO4J_server_ssl_policy_bolt_private__key=server-key.pem
-      - NEO4J_server_ssl_policy_bolt_public__certificate=self-signed-cert.pem
-      - NEO4J_server_ssl_policy_bolt_client__auth=NONE
+      - NEO4J_dbms_ssl_policy_bolt_enabled=true
+      - NEO4J_dbms_ssl_policy_bolt_base__directory=/var/lib/neo4j/certificates/bolt
+      - NEO4J_dbms_ssl_policy_bolt_private__key=server-key.pem
+      - NEO4J_dbms_ssl_policy_bolt_public__certificate=self-signed-cert.pem
+      - NEO4J_dbms_ssl_policy_bolt_client__auth=NONE
     volumes:
       - neo4j-self-signed-data:/data
       - neo4j-self-signed-logs:/logs

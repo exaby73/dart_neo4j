@@ -1,3 +1,3 @@
-## 1.0.0
+## 0.0.1
 
-- Initial version.
+- Initial release of dart_neo4j package.

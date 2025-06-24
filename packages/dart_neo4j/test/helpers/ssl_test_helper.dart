@@ -1,14 +1,50 @@
 import 'dart:io';
+import 'package:path/path.dart' as path;
 
 import 'package:dart_neo4j/dart_neo4j.dart';
 
 /// SSL configuration helper for testing with custom CA certificates.
 class SSLTestHelper {
   /// Path to the project's SSL certificates directory
-  static const String sslCertsPath = '/Users/exaby73/dev/oss/dart_neo4j/ssl-certs';
+  static String get sslCertsPath {
+    // Allow override via environment variable (useful for CI)
+    final envPath = Platform.environment['SSL_CERTS_PATH'];
+    if (envPath != null) return envPath;
+    
+    // Calculate dynamically from current file location
+    final currentFile = Platform.script.toFilePath();
+    final projectRoot = _findProjectRoot(currentFile);
+    return path.join(projectRoot, 'ssl-certs');
+  }
   
   /// Path to the CA certificate for testing
-  static const String caCertPath = '$sslCertsPath/ca-cert.pem';
+  static String get caCertPath => path.join(sslCertsPath, 'ca-cert.pem');
+  
+  /// Finds the project root directory by looking for dpk.yaml or docker-compose.yml
+  static String _findProjectRoot(String currentPath) {
+    var dir = Directory(path.dirname(currentPath));
+    
+    while (dir.path != dir.parent.path) {
+      // Check for project root indicators
+      if (File(path.join(dir.path, 'dpk.yaml')).existsSync() ||
+          File(path.join(dir.path, 'docker-compose.yml')).existsSync()) {
+        return dir.path;
+      }
+      dir = dir.parent;
+    }
+    
+    // Fallback: try to go up from current working directory
+    var workingDir = Directory.current;
+    while (workingDir.path != workingDir.parent.path) {
+      if (File(path.join(workingDir.path, 'dpk.yaml')).existsSync() ||
+          File(path.join(workingDir.path, 'docker-compose.yml')).existsSync()) {
+        return workingDir.path;
+      }
+      workingDir = workingDir.parent;
+    }
+    
+    throw Exception('Could not find project root. Ensure dpk.yaml exists in the project root. Current working directory: ${Directory.current.path}');
+  }
   
   /// Sets up the global SSL context to trust our test CA certificate.
   /// This allows SSL connections to work with our self-signed certificates.
