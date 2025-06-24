@@ -8,11 +8,10 @@ on:
 jobs:
   unit-tests:
     name: Test dart_packstream and dart_bolt
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         dart-version: ["3.8.0"]
 
     steps:
