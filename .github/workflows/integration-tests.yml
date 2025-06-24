@@ -89,22 +89,3 @@ jobs:
       - name: Stop Neo4j containers
         if: always()
         run: docker compose down -v
-
-      - name: Upload test results on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-test-results-${{ matrix.dart-version }}
-          path: |
-            packages/dart_neo4j/test/
-            ssl-certs/
-          retention-days: 7
-
-      - name: Upload Neo4j logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: neo4j-logs-${{ matrix.dart-version }}
-          path: |
-            packages/dart_neo4j/logs/
-          retention-days: 7

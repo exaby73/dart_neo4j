@@ -46,13 +46,3 @@ jobs:
 
       - name: Test dart_bolt
         run: dpk run test:bolt
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-results-${{ matrix.os }}
-          path: |
-            packages/dart_packstream/test/
-            packages/dart_bolt/test/
-          retention-days: 7

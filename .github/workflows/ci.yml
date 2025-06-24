@@ -85,16 +85,6 @@ jobs:
         if: always()
         run: docker compose down
 
-      - name: Upload test results on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-test-results
-          path: |
-            packages/*/test/
-            ssl-certs/
-          retention-days: 3
-
   # Status check job that other workflows can depend on
   all-checks:
     name: All Checks Status
