@@ -56,20 +56,14 @@ jobs:
             sleep 2
           done
           
-          # Verify certificates were created
-          ls -la ssl-certs/ || echo "ssl-certs directory not found"
-          
-          # Now start all containers including SSL ones
+          # Fix certificate permissions for the runner user
+          echo "Fixing certificate permissions..."
+          sudo chown -R runner:docker ssl-certs/ || sudo chown -R $USER:$USER ssl-certs/
+          sudo chmod -R 644 ssl-certs/*.pem
+          ls -la ssl-certs/
+
           echo "Starting all Neo4j containers..."
           docker compose up -d
-          
-          # Check container status
-          echo "Container status after startup:"
-          docker compose ps
-          
-          # Check for any failed containers
-          echo "Checking for failed containers..."
-          docker compose ps --filter "status=exited"
         env:
           COMPOSE_HTTP_TIMEOUT: 120
 
@@ -94,11 +88,11 @@ jobs:
           echo "Checking SSL container status..."
           docker logs neo4j-single-ssl --tail 10
           docker logs neo4j-self-signed --tail 10
-          
+
           echo "Testing SSL container HTTP interfaces..."
           curl -f http://localhost:7478/ || echo "SSL container HTTP not ready"
           curl -f http://localhost:7479/ || echo "Self-signed container HTTP not ready"
-          
+
           echo "Basic Neo4j instances are ready!"
           echo "SSL containers status checked - Dart tests will handle SSL connectivity."
 
