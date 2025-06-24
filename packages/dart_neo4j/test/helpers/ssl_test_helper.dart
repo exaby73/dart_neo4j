@@ -121,6 +121,8 @@ class SSLTestHelper {
   /// Checks if SSL certificates are available
   static Future<bool> areCertificatesAvailable() async {
     final caCertFile = File(caCertPath);
-    return await caCertFile.exists();
+    final exists = await caCertFile.exists();
+    print('SSL certificates check: path=$caCertPath, exists=$exists');
+    return exists;
   }
 }

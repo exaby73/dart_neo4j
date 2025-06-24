@@ -30,7 +30,7 @@ jobs:
             ~/.pub-cache
             **/.dart_tool
             **/pubspec.lock
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('packages/*/pubspec.yaml', 'pubspec.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -66,9 +66,6 @@ jobs:
 
           echo "Basic Neo4j instances are ready!"
           echo "Note: SSL containers (neo4j-single-ssl, neo4j-self-signed) will be tested by the Dart integration tests."
-
-      - name: Set SSL certificates path
-        run: echo "SSL_CERTS_PATH=$(pwd)/ssl-certs" >> $GITHUB_ENV
 
       - name: Run dart_neo4j integration tests
         run: dpk run test:neo4j

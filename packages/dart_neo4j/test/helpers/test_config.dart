@@ -145,6 +145,7 @@ class TestConfig {
   /// Checks if the SSL Neo4j instance is available
   static Future<bool> isSslAvailable() async {
     try {
+      print('Checking SSL Neo4j availability at: $sslHealthUrl');
       final client = HttpClient();
       final request = await client.getUrl(Uri.parse(sslHealthUrl));
       request.headers.set('Accept', 'application/json');
@@ -153,8 +154,11 @@ class TestConfig {
       await response.drain();
       client.close();
 
-      return response.statusCode == 200;
+      final isAvailable = response.statusCode == 200;
+      print('SSL Neo4j available: $isAvailable (status: ${response.statusCode})');
+      return isAvailable;
     } catch (e) {
+      print('SSL Neo4j availability check failed: $e');
       return false;
     }
   }
@@ -162,6 +166,7 @@ class TestConfig {
   /// Checks if the self-signed SSL Neo4j instance is available
   static Future<bool> isSelfSignedAvailable() async {
     try {
+      print('Checking self-signed SSL Neo4j availability at: $selfSignedHealthUrl');
       final client = HttpClient();
       final request = await client.getUrl(Uri.parse(selfSignedHealthUrl));
       request.headers.set('Accept', 'application/json');
@@ -170,8 +175,11 @@ class TestConfig {
       await response.drain();
       client.close();
 
-      return response.statusCode == 200;
+      final isAvailable = response.statusCode == 200;
+      print('Self-signed SSL Neo4j available: $isAvailable (status: ${response.statusCode})');
+      return isAvailable;
     } catch (e) {
+      print('Self-signed SSL Neo4j availability check failed: $e');
       return false;
     }
   }

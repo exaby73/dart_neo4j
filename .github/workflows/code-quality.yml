@@ -30,7 +30,7 @@ jobs:
             ~/.pub-cache
             **/.dart_tool
             **/pubspec.lock
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('packages/*/pubspec.yaml', 'pubspec.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
