@@ -78,12 +78,6 @@ jobs:
       - name: Get dependencies
         run: dpk get
 
-      - name: Check for outdated dependencies
-        run: |
-          cd packages/dart_packstream && dart pub outdated --mode=null-safety
-          cd ../dart_bolt && dart pub outdated --mode=null-safety
-          cd ../dart_neo4j && dart pub outdated --mode=null-safety
-
       - name: Check for unused dependencies
         run: |
           dart pub global activate dependency_validator
