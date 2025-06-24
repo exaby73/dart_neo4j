@@ -40,14 +40,14 @@ jobs:
       - name: Get dependencies
         run: dpk get
 
-      - name: Generate SSL certificates and start Neo4j containers
+      - name: Generate SSL certificates
         run: |
-          echo "Starting SSL certificate generator..."
-          docker compose up ssl-cert-generator
-          
-          echo "Checking generated certificates:"
-          ls -la ssl-certs/ || echo "SSL certificates not yet available"
-          
+          echo "Generating SSL certificates..."
+          chmod +x scripts/generate-ssl-certs.sh
+          ./scripts/generate-ssl-certs.sh
+
+      - name: Start Neo4j containers
+        run: |
           echo "Starting all Neo4j containers..."
           docker compose up -d
         env:

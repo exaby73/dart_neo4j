@@ -122,8 +122,6 @@ services:
       - ./ssl-certs:/var/lib/neo4j/certificates/bolt
     networks:
       - neo4j-network
-    depends_on:
-      - ssl-cert-generator
 
   # Self-signed SSL Neo4j instance for bolt+ssc:// testing
   neo4j-self-signed:
@@ -152,36 +150,7 @@ services:
       - ./ssl-certs:/var/lib/neo4j/certificates/bolt
     networks:
       - neo4j-network
-    depends_on:
-      - ssl-cert-generator
 
-  # SSL Certificate Generator Service
-  ssl-cert-generator:
-    image: alpine:latest
-    container_name: ssl-cert-generator
-    volumes:
-      - ./ssl-certs:/ssl-certs
-      - ./scripts:/scripts:ro
-    working_dir: /ssl-certs
-    command: >
-      sh -c "
-        apk add --no-cache openssl bash &&
-        if [ ! -f /ssl-certs/server-cert.pem ]; then
-          echo 'Generating SSL certificates...' &&
-          cp /scripts/generate-ssl-certs.sh /tmp/ &&
-          chmod +x /tmp/generate-ssl-certs.sh &&
-          sed -i 's|CERTS_DIR=\"\$$SCRIPT_DIR/../ssl-certs\"|CERTS_DIR=\"/ssl-certs\"|' /tmp/generate-ssl-certs.sh &&
-          /tmp/generate-ssl-certs.sh &&
-          echo 'Setting world-readable permissions for CI compatibility...' &&
-          chmod -R 755 /ssl-certs &&
-          chmod 644 /ssl-certs/*.pem /ssl-certs/*.cnf /ssl-certs/*.csr /ssl-certs/*.srl 2>/dev/null || true
-        else
-          echo 'SSL certificates already exist, skipping generation.' &&
-          ls -la /ssl-certs/
-        fi
-      "
-    networks:
-      - neo4j-network
 
 volumes:
   neo4j-single-data:
