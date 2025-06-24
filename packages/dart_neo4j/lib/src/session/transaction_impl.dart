@@ -9,7 +9,7 @@ abstract class TransactionImpl implements Transaction {
   final PooledConnection _pooledConnection;
   final ConnectionPool _connectionPool;
   final TransactionConfig? config;
-  
+
   TransactionState _state = TransactionState.active;
 
   /// Creates a new transaction implementation.
@@ -22,18 +22,25 @@ abstract class TransactionImpl implements Transaction {
   bool get isActive => _state == TransactionState.active;
 
   @override
-  bool get isClosed => _state == TransactionState.committed || _state == TransactionState.rolledBack;
+  bool get isClosed =>
+      _state == TransactionState.committed ||
+      _state == TransactionState.rolledBack;
 
   @override
   bool get isMarkedForRollback => _state == TransactionState.markedForRollback;
 
   @override
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]) async {
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) async {
     if (isClosed) {
       throw const TransactionClosedException('Transaction is closed');
     }
     if (isMarkedForRollback) {
-      throw const TransactionClosedException('Transaction is marked for rollback');
+      throw const TransactionClosedException(
+        'Transaction is marked for rollback',
+      );
     }
 
     try {
@@ -50,7 +57,9 @@ abstract class TransactionImpl implements Transaction {
       throw const TransactionClosedException('Transaction is already closed');
     }
     if (isMarkedForRollback) {
-      throw const TransactionClosedException('Cannot commit transaction marked for rollback');
+      throw const TransactionClosedException(
+        'Cannot commit transaction marked for rollback',
+      );
     }
 
     try {
@@ -68,7 +77,9 @@ abstract class TransactionImpl implements Transaction {
   @override
   Future<void> rollback() async {
     if (_state == TransactionState.committed) {
-      throw const TransactionClosedException('Cannot rollback committed transaction');
+      throw const TransactionClosedException(
+        'Cannot rollback committed transaction',
+      );
     }
     if (_state == TransactionState.rolledBack) {
       return; // Already rolled back
@@ -79,7 +90,9 @@ abstract class TransactionImpl implements Transaction {
       await _pooledConnection.connection.rollbackTransaction();
       _state = TransactionState.rolledBack;
     } catch (e) {
-      _state = TransactionState.rolledBack; // Still mark as rolled back even if message fails
+      _state =
+          TransactionState
+              .rolledBack; // Still mark as rolled back even if message fails
       throw DatabaseException('Failed to rollback transaction: $e', null, e);
     } finally {
       await _cleanup();
@@ -128,16 +141,27 @@ abstract class TransactionImpl implements Transaction {
 /// Concrete implementation of a general transaction.
 class GeneralTransactionImpl extends TransactionImpl {
   /// Creates a new general transaction.
-  GeneralTransactionImpl(super.pooledConnection, super.connectionPool, super.config);
+  GeneralTransactionImpl(
+    super.pooledConnection,
+    super.connectionPool,
+    super.config,
+  );
 }
 
 /// Concrete implementation of a read-only transaction.
 class ReadTransactionImpl extends TransactionImpl implements ReadTransaction {
   /// Creates a new read transaction.
-  ReadTransactionImpl(super.pooledConnection, super.connectionPool, super.config);
+  ReadTransactionImpl(
+    super.pooledConnection,
+    super.connectionPool,
+    super.config,
+  );
 
   @override
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]) async {
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) async {
     // Could add read-only query validation here
     return super.run(cypher, parameters);
   }
@@ -146,10 +170,17 @@ class ReadTransactionImpl extends TransactionImpl implements ReadTransaction {
 /// Concrete implementation of a read-write transaction.
 class WriteTransactionImpl extends TransactionImpl implements WriteTransaction {
   /// Creates a new write transaction.
-  WriteTransactionImpl(super.pooledConnection, super.connectionPool, super.config);
+  WriteTransactionImpl(
+    super.pooledConnection,
+    super.connectionPool,
+    super.config,
+  );
 
   @override
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]) async {
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) async {
     // Could add write permission validation here
     return super.run(cypher, parameters);
   }

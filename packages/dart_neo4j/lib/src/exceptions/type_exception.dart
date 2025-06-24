@@ -27,14 +27,13 @@ class FieldNotFoundException extends TypeException {
     this.fieldName, [
     this.availableFields,
     Object? cause,
-  ]) : super(
-          'Field "$fieldName" not found in record',
-          cause,
-        );
+  ]) : super('Field "$fieldName" not found in record', cause);
 
   @override
   String toString() {
-    final buffer = StringBuffer('FieldNotFoundException: Field "$fieldName" not found in record');
+    final buffer = StringBuffer(
+      'FieldNotFoundException: Field "$fieldName" not found in record',
+    );
     if (availableFields != null && availableFields!.isNotEmpty) {
       buffer.write('\nAvailable fields: ${availableFields!.join(', ')}');
     }
@@ -67,9 +66,9 @@ class TypeMismatchException extends TypeException {
     this.actualValue,
     Object? cause,
   ]) : super(
-          'Field "$fieldName" expected type $expectedType but got $actualType',
-          cause,
-        );
+         'Field "$fieldName" expected type $expectedType but got $actualType',
+         cause,
+       );
 
   @override
   String toString() {
@@ -100,9 +99,9 @@ class UnexpectedNullException extends TypeException {
     this.expectedType, [
     Object? cause,
   ]) : super(
-          'Field "$fieldName" expected non-null $expectedType but got null',
-          cause,
-        );
+         'Field "$fieldName" expected non-null $expectedType but got null',
+         cause,
+       );
 
   @override
   String toString() {
@@ -125,18 +124,14 @@ class ConversionException extends TypeException {
   final Type targetType;
 
   /// Creates a new conversion exception.
-  const ConversionException(
-    this.value,
-    this.targetType, [
-    Object? cause,
-  ]) : super(
-          'Cannot convert value $value to type $targetType',
-          cause,
-        );
+  const ConversionException(this.value, this.targetType, [Object? cause])
+    : super('Cannot convert value $value to type $targetType', cause);
 
   @override
   String toString() {
-    final buffer = StringBuffer('ConversionException: Cannot convert value $value to type $targetType');
+    final buffer = StringBuffer(
+      'ConversionException: Cannot convert value $value to type $targetType',
+    );
     if (cause != null) {
       buffer.write('\nCaused by: $cause');
     }
@@ -153,18 +148,14 @@ class IndexOutOfRangeException extends TypeException {
   final int maxIndex;
 
   /// Creates a new index out of range exception.
-  const IndexOutOfRangeException(
-    this.index,
-    this.maxIndex, [
-    Object? cause,
-  ]) : super(
-          'Index $index is out of range. Valid range: 0 to $maxIndex',
-          cause,
-        );
+  const IndexOutOfRangeException(this.index, this.maxIndex, [Object? cause])
+    : super('Index $index is out of range. Valid range: 0 to $maxIndex', cause);
 
   @override
   String toString() {
-    final buffer = StringBuffer('IndexOutOfRangeException: Index $index is out of range. Valid range: 0 to $maxIndex');
+    final buffer = StringBuffer(
+      'IndexOutOfRangeException: Index $index is out of range. Valid range: 0 to $maxIndex',
+    );
     if (cause != null) {
       buffer.write('\nCaused by: $cause');
     }

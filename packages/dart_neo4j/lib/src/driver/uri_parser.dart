@@ -59,7 +59,8 @@ class ParsedUri {
   bool get encrypted => encryptionLevel != EncryptionLevel.none;
 
   /// Whether this connection supports self-signed certificates.
-  bool get allowsSelfSignedCertificates => encryptionLevel == EncryptionLevel.encryptedSelfSigned;
+  bool get allowsSelfSignedCertificates =>
+      encryptionLevel == EncryptionLevel.encryptedSelfSigned;
 
   /// Whether this is a direct connection.
   bool get isDirect => connectionType == ConnectionType.direct;
@@ -76,16 +77,29 @@ class ParsedUri {
 /// Utility class for parsing Neo4j URIs.
 class UriParser {
   /// Supported URI schemes and their configurations.
-  static const Map<String, ({ConnectionType type, EncryptionLevel encryption})> _supportedSchemes = {
+  static const Map<String, ({ConnectionType type, EncryptionLevel encryption})>
+  _supportedSchemes = {
     // Direct connections
     'bolt': (type: ConnectionType.direct, encryption: EncryptionLevel.none),
-    'bolt+s': (type: ConnectionType.direct, encryption: EncryptionLevel.encrypted),
-    'bolt+ssc': (type: ConnectionType.direct, encryption: EncryptionLevel.encryptedSelfSigned),
-    
+    'bolt+s': (
+      type: ConnectionType.direct,
+      encryption: EncryptionLevel.encrypted,
+    ),
+    'bolt+ssc': (
+      type: ConnectionType.direct,
+      encryption: EncryptionLevel.encryptedSelfSigned,
+    ),
+
     // Routing connections
     'neo4j': (type: ConnectionType.routing, encryption: EncryptionLevel.none),
-    'neo4j+s': (type: ConnectionType.routing, encryption: EncryptionLevel.encrypted),
-    'neo4j+ssc': (type: ConnectionType.routing, encryption: EncryptionLevel.encryptedSelfSigned),
+    'neo4j+s': (
+      type: ConnectionType.routing,
+      encryption: EncryptionLevel.encrypted,
+    ),
+    'neo4j+ssc': (
+      type: ConnectionType.routing,
+      encryption: EncryptionLevel.encryptedSelfSigned,
+    ),
   };
 
   /// Default port for Neo4j Bolt protocol.
@@ -105,7 +119,7 @@ class UriParser {
   static ParsedUri parse(String uriString) {
     try {
       final uri = Uri.parse(uriString);
-      
+
       // Check if scheme is supported
       final schemeConfig = _supportedSchemes[uri.scheme];
       if (schemeConfig == null) {
@@ -123,7 +137,10 @@ class UriParser {
       // Get port (use default if not specified)
       final port = uri.hasPort ? uri.port : defaultPort;
       if (port < 1 || port > 65535) {
-        throw InvalidUriException('Invalid port: $port. Port must be between 1 and 65535', uriString);
+        throw InvalidUriException(
+          'Invalid port: $port. Port must be between 1 and 65535',
+          uriString,
+        );
       }
 
       // Extract database name from path
@@ -133,10 +150,13 @@ class UriParser {
         final pathSegments = uri.pathSegments;
         if (pathSegments.isNotEmpty) {
           database = pathSegments.first;
-          
+
           // Validate database name
           if (!_isValidDatabaseName(database)) {
-            throw InvalidUriException('Invalid database name: $database', uriString);
+            throw InvalidUriException(
+              'Invalid database name: $database',
+              uriString,
+            );
           }
         }
       }
@@ -172,36 +192,36 @@ class UriParser {
     // - Contain only letters, digits, dots, hyphens, and underscores
     // - Not end with a dot or hyphen
     // - Not contain consecutive dots
-    
+
     if (name.length < 3 || name.length > 63) {
       return false;
     }
-    
+
     // Must start with a letter
     if (!RegExp(r'^[a-zA-Z]').hasMatch(name)) {
       return false;
     }
-    
+
     // Must not end with dot or hyphen
     if (name.endsWith('.') || name.endsWith('-')) {
       return false;
     }
-    
+
     // Must not contain consecutive dots
     if (name.contains('..')) {
       return false;
     }
-    
+
     // Must contain only valid characters
     if (!RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(name)) {
       return false;
     }
-    
+
     return true;
   }
 
   /// Gets the default database name for a connection.
-  /// 
+  ///
   /// Returns the database name from the URI if specified, otherwise returns 'neo4j'.
   static String getDefaultDatabase(ParsedUri parsedUri) {
     return parsedUri.database ?? 'neo4j';
@@ -210,7 +230,7 @@ class UriParser {
   /// Creates a connection string for display purposes (without sensitive information).
   static String createDisplayString(ParsedUri parsedUri) {
     final buffer = StringBuffer();
-    
+
     // Add scheme
     switch (parsedUri.connectionType) {
       case ConnectionType.direct:
@@ -220,7 +240,7 @@ class UriParser {
         buffer.write('neo4j');
         break;
     }
-    
+
     // Add encryption suffix
     switch (parsedUri.encryptionLevel) {
       case EncryptionLevel.encrypted:
@@ -233,15 +253,15 @@ class UriParser {
         // No suffix
         break;
     }
-    
+
     // Add host and port
     buffer.write('://${parsedUri.host}:${parsedUri.port}');
-    
+
     // Add database if specified
     if (parsedUri.database != null) {
       buffer.write('/${parsedUri.database}');
     }
-    
+
     return buffer.toString();
   }
 }

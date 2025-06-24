@@ -13,28 +13,32 @@ void main() {
       if (Platform.environment['SKIP_SSL_TESTS'] == 'true') {
         return;
       }
-      
+
       // Set up SSL context to trust our test CA certificate
       try {
         if (await SSLTestHelper.areCertificatesAvailable()) {
           await SSLTestHelper.setupSSLContextForTesting();
           print('SSL context configured to trust test CA certificate');
         } else {
-          print('Warning: SSL certificates not found. Run ./scripts/generate-ssl-certs.sh first.');
+          print(
+            'Warning: SSL certificates not found. Run ./scripts/generate-ssl-certs.sh first.',
+          );
           return;
         }
       } catch (e) {
         print('Warning: Failed to set up SSL context: $e');
         return;
       }
-      
+
       print('Waiting for SSL Neo4j instances to be ready...');
       try {
         await TestConfig.waitForSsl();
         await TestConfig.waitForSelfSigned();
         print('SSL Neo4j instances are ready!');
       } catch (e) {
-        print('Warning: SSL instances not available, some tests will be skipped: $e');
+        print(
+          'Warning: SSL instances not available, some tests will be skipped: $e',
+        );
       }
     });
 
@@ -52,10 +56,12 @@ void main() {
 
         try {
           await driver.verifyConnectivity();
-          
+
           final session = driver.session();
           try {
-            final result = await session.run('RETURN "SSL Connection Successful" AS message');
+            final result = await session.run(
+              'RETURN "SSL Connection Successful" AS message',
+            );
             final records = await result.list();
             final record = records.first;
             expect(record['message'], equals('SSL Connection Successful'));
@@ -84,15 +90,15 @@ void main() {
             // Create
             await session.run(
               'CREATE (n:SSLTest {name: \$name, encrypted: true})',
-              {'name': 'SSL Test Node'}
+              {'name': 'SSL Test Node'},
             );
 
             // Read
             final result = await session.run(
               'MATCH (n:SSLTest {name: \$name}) RETURN n.name AS name, n.encrypted AS encrypted',
-              {'name': 'SSL Test Node'}
+              {'name': 'SSL Test Node'},
             );
-            
+
             final records = await result.list();
             final record = records.first;
             expect(record['name'], equals('SSL Test Node'));
@@ -101,15 +107,15 @@ void main() {
             // Update
             await session.run(
               'MATCH (n:SSLTest {name: \$name}) SET n.updated = true',
-              {'name': 'SSL Test Node'}
+              {'name': 'SSL Test Node'},
             );
 
             // Delete
             final deleteResult = await session.run(
               'MATCH (n:SSLTest {name: \$name}) DELETE n RETURN count(n) AS deleted',
-              {'name': 'SSL Test Node'}
+              {'name': 'SSL Test Node'},
             );
-            
+
             final deleteRecords = await deleteResult.list();
             expect(deleteRecords.first['deleted'], equals(1));
           } finally {
@@ -137,7 +143,7 @@ void main() {
             try {
               final result = await session.run(
                 'RETURN \$connectionId AS id, "SSL" AS type',
-                {'connectionId': index}
+                {'connectionId': index},
               );
               final records = await result.list();
               return records.first['id'] as int;
@@ -156,33 +162,41 @@ void main() {
     });
 
     group('bolt+ssc:// (encrypted with self-signed certificates)', () {
-      test('should connect successfully with self-signed certificate', () async {
-        if (!await TestConfig.isSelfSignedAvailable()) {
-          markTestSkipped('Self-signed SSL Neo4j instance not available');
-          return;
-        }
-
-        final driver = Neo4jDriver.create(
-          TestConfig.boltSelfSignedUri,
-          auth: TestConfig.sslAuth,
-        );
-
-        try {
-          await driver.verifyConnectivity();
-          
-          final session = driver.session();
-          try {
-            final result = await session.run('RETURN "Self-Signed SSL Connection Successful" AS message');
-            final records = await result.list();
-            final record = records.first;
-            expect(record['message'], equals('Self-Signed SSL Connection Successful'));
-          } finally {
-            await session.close();
+      test(
+        'should connect successfully with self-signed certificate',
+        () async {
+          if (!await TestConfig.isSelfSignedAvailable()) {
+            markTestSkipped('Self-signed SSL Neo4j instance not available');
+            return;
           }
-        } finally {
-          await driver.close();
-        }
-      });
+
+          final driver = Neo4jDriver.create(
+            TestConfig.boltSelfSignedUri,
+            auth: TestConfig.sslAuth,
+          );
+
+          try {
+            await driver.verifyConnectivity();
+
+            final session = driver.session();
+            try {
+              final result = await session.run(
+                'RETURN "Self-Signed SSL Connection Successful" AS message',
+              );
+              final records = await result.list();
+              final record = records.first;
+              expect(
+                record['message'],
+                equals('Self-Signed SSL Connection Successful'),
+              );
+            } finally {
+              await session.close();
+            }
+          } finally {
+            await driver.close();
+          }
+        },
+      );
 
       test('should perform transactions over self-signed SSL', () async {
         if (!await TestConfig.isSelfSignedAvailable()) {
@@ -201,16 +215,24 @@ void main() {
             await session.executeWrite((tx) async {
               await tx.run(
                 'CREATE (n:SelfSignedTest {name: \$name, timestamp: \$timestamp})',
-                {'name': 'Transaction Test', 'timestamp': DateTime.now().millisecondsSinceEpoch}
+                {
+                  'name': 'Transaction Test',
+                  'timestamp': DateTime.now().millisecondsSinceEpoch,
+                },
               );
-              
+
               await tx.run(
                 'CREATE (n:SelfSignedTest {name: \$name, timestamp: \$timestamp})',
-                {'name': 'Transaction Test 2', 'timestamp': DateTime.now().millisecondsSinceEpoch}
+                {
+                  'name': 'Transaction Test 2',
+                  'timestamp': DateTime.now().millisecondsSinceEpoch,
+                },
               );
             });
 
-            final result = await session.run('MATCH (n:SelfSignedTest) RETURN count(n) AS count');
+            final result = await session.run(
+              'MATCH (n:SelfSignedTest) RETURN count(n) AS count',
+            );
             final records = await result.list();
             expect(records.first['count'], greaterThanOrEqualTo(2));
 
@@ -243,44 +265,50 @@ void main() {
         }
       });
 
-      test('should throw appropriate exception for certificate validation failure', () async {
-        // This test would require a SSL server with an invalid certificate
-        // For now, we'll just test that self-signed fails when using bolt+s://
-        if (!await TestConfig.isSelfSignedAvailable()) {
-          markTestSkipped('Self-signed SSL Neo4j instance not available');
-          return;
-        }
+      test(
+        'should throw appropriate exception for certificate validation failure',
+        () async {
+          // This test would require a SSL server with an invalid certificate
+          // For now, we'll just test that self-signed fails when using bolt+s://
+          if (!await TestConfig.isSelfSignedAvailable()) {
+            markTestSkipped('Self-signed SSL Neo4j instance not available');
+            return;
+          }
 
-        final driver = Neo4jDriver.create(
-          'bolt+s://localhost:7695', // Self-signed server with strict validation
-          auth: TestConfig.sslAuth,
-        );
-
-        try {
-          await expectLater(
-            driver.verifyConnectivity(),
-            throwsA(isA<ServiceUnavailableException>()),
+          final driver = Neo4jDriver.create(
+            'bolt+s://localhost:7695', // Self-signed server with strict validation
+            auth: TestConfig.sslAuth,
           );
-        } finally {
-          await driver.close();
-        }
-      });
 
-      test('should handle connection timeout for unavailable SSL server', () async {
-        final driver = Neo4jDriver.create(
-          'bolt+s://localhost:9999', // Non-existent port
-          auth: TestConfig.auth,
-        );
+          try {
+            await expectLater(
+              driver.verifyConnectivity(),
+              throwsA(isA<ServiceUnavailableException>()),
+            );
+          } finally {
+            await driver.close();
+          }
+        },
+      );
 
-        try {
-          await expectLater(
-            driver.verifyConnectivity(),
-            throwsA(isA<Neo4jException>()),
+      test(
+        'should handle connection timeout for unavailable SSL server',
+        () async {
+          final driver = Neo4jDriver.create(
+            'bolt+s://localhost:9999', // Non-existent port
+            auth: TestConfig.auth,
           );
-        } finally {
-          await driver.close();
-        }
-      });
+
+          try {
+            await expectLater(
+              driver.verifyConnectivity(),
+              throwsA(isA<Neo4jException>()),
+            );
+          } finally {
+            await driver.close();
+          }
+        },
+      );
     });
 
     group('SSL URI Parsing Integration', () {

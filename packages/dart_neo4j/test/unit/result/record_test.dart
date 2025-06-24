@@ -26,7 +26,10 @@ void main() {
 
     group('basic functionality', () {
       test('should create record from keys and values', () {
-        expect(record.keys, equals(['name', 'age', 'active', 'score', 'tags', 'profile']));
+        expect(
+          record.keys,
+          equals(['name', 'age', 'active', 'score', 'tags', 'profile']),
+        );
         expect(record.length, equals(6));
         expect(record.isEmpty, isFalse);
         expect(record.isNotEmpty, isTrue);
@@ -39,7 +42,10 @@ void main() {
 
       test('should throw ArgumentError for mismatched keys and values', () {
         expect(
-          () => Record.fromBolt(['key1'], [PsString('value1'), PsString('value2')]),
+          () => Record.fromBolt(
+            ['key1'],
+            [PsString('value1'), PsString('value2')],
+          ),
           throwsArgumentError,
         );
       });
@@ -144,7 +150,10 @@ void main() {
       });
 
       test('should get map or null', () {
-        expect(record.getMapOrNull('profile'), equals({'city': 'New York', 'country': 'USA'}));
+        expect(
+          record.getMapOrNull('profile'),
+          equals({'city': 'New York', 'country': 'USA'}),
+        );
         expect(record.getMapOrNull('missing'), isNull);
         expect(record.getMapOrNull('name'), isNull); // wrong type
       });
@@ -210,7 +219,10 @@ void main() {
       test('should get Node or null', () {
         expect(recordWithNeo4jTypes.getNodeOrNull('person'), isA<Node>());
         expect(recordWithNeo4jTypes.getNodeOrNull('missing'), isNull);
-        expect(recordWithNeo4jTypes.getNodeOrNull('knows'), isNull); // wrong type
+        expect(
+          recordWithNeo4jTypes.getNodeOrNull('knows'),
+          isNull,
+        ); // wrong type
       });
 
       test('should get Relationship values', () {
@@ -220,9 +232,15 @@ void main() {
       });
 
       test('should get Relationship or null', () {
-        expect(recordWithNeo4jTypes.getRelationshipOrNull('knows'), isA<Relationship>());
+        expect(
+          recordWithNeo4jTypes.getRelationshipOrNull('knows'),
+          isA<Relationship>(),
+        );
         expect(recordWithNeo4jTypes.getRelationshipOrNull('missing'), isNull);
-        expect(recordWithNeo4jTypes.getRelationshipOrNull('person'), isNull); // wrong type
+        expect(
+          recordWithNeo4jTypes.getRelationshipOrNull('person'),
+          isNull,
+        ); // wrong type
       });
 
       test('should get UnboundRelationship values', () {
@@ -232,9 +250,18 @@ void main() {
       });
 
       test('should get UnboundRelationship or null', () {
-        expect(recordWithNeo4jTypes.getUnboundRelationshipOrNull('likes'), isA<UnboundRelationship>());
-        expect(recordWithNeo4jTypes.getUnboundRelationshipOrNull('missing'), isNull);
-        expect(recordWithNeo4jTypes.getUnboundRelationshipOrNull('person'), isNull); // wrong type
+        expect(
+          recordWithNeo4jTypes.getUnboundRelationshipOrNull('likes'),
+          isA<UnboundRelationship>(),
+        );
+        expect(
+          recordWithNeo4jTypes.getUnboundRelationshipOrNull('missing'),
+          isNull,
+        );
+        expect(
+          recordWithNeo4jTypes.getUnboundRelationshipOrNull('person'),
+          isNull,
+        ); // wrong type
       });
 
       test('should get Path values', () {
@@ -246,7 +273,10 @@ void main() {
       test('should get Path or null', () {
         expect(recordWithNeo4jTypes.getPathOrNull('journey'), isA<Path>());
         expect(recordWithNeo4jTypes.getPathOrNull('missing'), isNull);
-        expect(recordWithNeo4jTypes.getPathOrNull('person'), isNull); // wrong type
+        expect(
+          recordWithNeo4jTypes.getPathOrNull('person'),
+          isNull,
+        ); // wrong type
       });
     });
 
@@ -275,7 +305,7 @@ void main() {
         final values = <PsDataType>[PsString('John'), PsInt.compact(25)];
         final record1 = Record.fromBolt(keys, values);
         final record2 = Record.fromBolt(keys, values);
-        
+
         expect(record1, equals(record2));
         expect(record1.hashCode, equals(record2.hashCode));
       });
@@ -283,7 +313,7 @@ void main() {
       test('should not be equal when different values', () {
         final record1 = Record.fromBolt(['name'], [PsString('John')]);
         final record2 = Record.fromBolt(['name'], [PsString('Jane')]);
-        
+
         expect(record1, isNot(equals(record2)));
       });
     });
@@ -311,7 +341,7 @@ void main() {
             PsInt.compact(42),
           ]),
         });
-        
+
         final complexRecord = Record.fromBolt(['complex'], [complexValue]);
         final result = complexRecord.getMap('complex');
         expect(result['nested'], isA<List>());

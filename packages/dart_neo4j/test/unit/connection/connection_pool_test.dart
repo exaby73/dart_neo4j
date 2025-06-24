@@ -41,7 +41,7 @@ void main() {
   group('PooledConnection', () {
     // Note: These tests are commented out as they require actual BoltConnection instances
     // which would need network connectivity. In a real scenario, these would be integration tests.
-    
+
     test('basic pooled connection concept', () {
       // Test the basic concept without actual connections
       expect(1, equals(1)); // Placeholder test
@@ -84,14 +84,16 @@ void main() {
     test('acquire throws when pool is closed', () async {
       pool = ConnectionPool(uri, auth);
       await pool.close();
-      
+
       expect(
         () => pool.acquire(),
-        throwsA(isA<ServiceUnavailableException>().having(
-          (e) => e.message,
-          'message',
-          'Connection pool is closed',
-        )),
+        throwsA(
+          isA<ServiceUnavailableException>().having(
+            (e) => e.message,
+            'message',
+            'Connection pool is closed',
+          ),
+        ),
       );
     });
 
@@ -107,9 +109,9 @@ void main() {
 
     // Note: These tests would require integration testing or a more complex mocking approach
     // since ConnectionPool creates BoltConnection instances internally.
-    // For now, we'll focus on testing the basic functionality that doesn't require 
+    // For now, we'll focus on testing the basic functionality that doesn't require
     // actual network connections.
-    
+
     test('basic pool state management', () {
       pool = ConnectionPool(uri, auth);
       expect(pool.size, equals(0));
@@ -119,4 +121,3 @@ void main() {
     });
   });
 }
-

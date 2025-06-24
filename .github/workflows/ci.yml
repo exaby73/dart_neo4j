@@ -3,97 +3,97 @@ name: CI
 on:
   push:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   # Run all checks to provide a single status for branch protection
   ci:
     name: Continuous Integration
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        dart-version: ['3.8.0']
-    
+        dart-version: ["3.8.0"]
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Dart
-      uses: dart-lang/setup-dart@v1
-      with:
-        sdk: ${{ matrix.dart-version }}
-    
-    - name: Cache pub dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pub-cache
-          **/.dart_tool
-          **/pubspec.lock
-        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pub-
-    
-    - name: Install dpk
-      run: dart pub global activate dpk
-    
-    - name: Get dependencies
-      run: dpk get
-    
-    # Code Quality Checks
-    - name: Check formatting
-      run: dart format --set-exit-if-changed .
-    
-    - name: Run static analysis
-      run: dpk run analyze
-    
-    # Unit Tests (fast, no external dependencies)
-    - name: Test dart_packstream
-      run: dpk run test:packstream
-    
-    - name: Test dart_bolt
-      run: dpk run test:bolt
-    
-    # Integration Tests Setup
-    - name: Start Neo4j container for basic tests
-      run: |
-        docker-compose up -d neo4j-single --wait
-        # Verify basic connectivity
-        echo "Testing neo4j-single connection..."
-        until docker exec neo4j-single cypher-shell -u neo4j -p password 'RETURN "ready" as status' 2>/dev/null; do
-          echo "Waiting for neo4j-single..."
-          sleep 5
-        done
-        echo "Neo4j single instance is ready!"
-      env:
-        COMPOSE_HTTP_TIMEOUT: 60
-    
-    - name: Set SSL certificates path
-      run: echo "SSL_CERTS_PATH=$(pwd)/ssl-certs" >> $GITHUB_ENV
-    
-    # Integration Tests (basic connectivity only for CI)
-    - name: Test dart_neo4j basic functionality
-      run: |
-        cd packages/dart_neo4j
-        # Run only basic integration tests, skip SSL and routing tests in main CI
-        SKIP_SSL_TESTS=true SKIP_ROUTING_TESTS=true dart test test/integration/basic/ -j 1
-      env:
-        SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
-    
-    - name: Cleanup Neo4j containers
-      if: always()
-      run: docker-compose down
-    
-    - name: Upload test results on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: ci-test-results
-        path: |
-          packages/*/test/
-          ssl-certs/
-        retention-days: 3
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.dart-version }}
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/.dart_tool
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dpk
+        run: dart pub global activate dpk
+
+      - name: Get dependencies
+        run: dpk get
+
+      # Code Quality Checks
+      - name: Check formatting
+        run: dpk run format
+
+      - name: Run static analysis
+        run: dpk run analyze
+
+      # Unit Tests (fast, no external dependencies)
+      - name: Test dart_packstream
+        run: dpk run test:packstream
+
+      - name: Test dart_bolt
+        run: dpk run test:bolt
+
+      # Integration Tests Setup
+      - name: Start Neo4j container for basic tests
+        run: |
+          docker-compose up -d neo4j-single --wait
+          # Verify basic connectivity
+          echo "Testing neo4j-single connection..."
+          until docker exec neo4j-single cypher-shell -u neo4j -p password 'RETURN "ready" as status' 2>/dev/null; do
+            echo "Waiting for neo4j-single..."
+            sleep 5
+          done
+          echo "Neo4j single instance is ready!"
+        env:
+          COMPOSE_HTTP_TIMEOUT: 60
+
+      - name: Set SSL certificates path
+        run: echo "SSL_CERTS_PATH=$(pwd)/ssl-certs" >> $GITHUB_ENV
+
+      # Integration Tests (basic connectivity only for CI)
+      - name: Test dart_neo4j basic functionality
+        run: |
+          cd packages/dart_neo4j
+          # Run only basic integration tests, skip SSL and routing tests in main CI
+          SKIP_SSL_TESTS=true SKIP_ROUTING_TESTS=true dart test test/integration/basic/ -j 1
+        env:
+          SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
+
+      - name: Cleanup Neo4j containers
+        if: always()
+        run: docker-compose down
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-results
+          path: |
+            packages/*/test/
+            ssl-certs/
+          retention-days: 3
 
   # Status check job that other workflows can depend on
   all-checks:
@@ -101,12 +101,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ci]
     if: always()
-    
+
     steps:
-    - name: Check all jobs status
-      run: |
-        if [ "${{ needs.ci.result }}" != "success" ]; then
-          echo "CI checks failed"
-          exit 1
-        fi
-        echo "All checks passed!"
+      - name: Check all jobs status
+        run: |
+          if [ "${{ needs.ci.result }}" != "success" ]; then
+            echo "CI checks failed"
+            exit 1
+          fi
+          echo "All checks passed!"

@@ -10,16 +10,13 @@ class Result {
   final List<String> _keys;
   final StreamController<Record> _recordController;
   final Completer<ResultSummary> _summaryCompleter;
-  
+
   bool _isConsumed = false;
 
   /// Creates a new result.
-  Result._(
-    this._query,
-    this._parameters,
-    this._keys,
-  )   : _recordController = StreamController<Record>(),
-        _summaryCompleter = Completer<ResultSummary>();
+  Result._(this._query, this._parameters, this._keys)
+    : _recordController = StreamController<Record>(),
+      _summaryCompleter = Completer<ResultSummary>();
 
   /// Creates a result for a query.
   factory Result.forQuery(
@@ -41,7 +38,6 @@ class Result {
 
   /// Whether this result has been consumed.
   bool get isConsumed => _isConsumed;
-
 
   /// Stream of records from this result.
   ///
@@ -74,7 +70,9 @@ class Result {
       throw ClientException('Expected single record but result was empty');
     }
     if (recordList.length > 1) {
-      throw ClientException('Expected single record but got ${recordList.length} records');
+      throw ClientException(
+        'Expected single record but got ${recordList.length} records',
+      );
     }
     return recordList.first;
   }
@@ -140,8 +138,6 @@ class Result {
     }
   }
 
-
-
   @override
   String toString() {
     return 'Result{keys: $keys, consumed: $_isConsumed}';
@@ -197,7 +193,9 @@ class CompletedResult {
       throw ClientException('Expected single record but result was empty');
     }
     if (_records.length > 1) {
-      throw ClientException('Expected single record but got ${_records.length} records');
+      throw ClientException(
+        'Expected single record but got ${_records.length} records',
+      );
     }
     return _records.first;
   }

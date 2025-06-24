@@ -11,6 +11,11 @@ scripts:
     runInPackages:
       - packages/*
 
+  format:
+    command: dart format --set-exit-if-changed .
+    runInPackages:
+      - packages/*
+
   test:packstream:
     command: dart test
     runInPackages:

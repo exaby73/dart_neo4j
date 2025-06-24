@@ -10,12 +10,14 @@ class Record {
 
   /// Creates a new record from field names and values.
   Record._(this._keys, this._values)
-      : _fieldMap = Map.fromIterables(_keys, _values);
+    : _fieldMap = Map.fromIterables(_keys, _values);
 
   /// Creates a record from Bolt record message data.
   factory Record.fromBolt(List<String> keys, List<dynamic> values) {
     if (keys.length != values.length) {
-      throw ArgumentError('Keys and values length mismatch: ${keys.length} != ${values.length}');
+      throw ArgumentError(
+        'Keys and values length mismatch: ${keys.length} != ${values.length}',
+      );
     }
 
     final convertedValues = values.map(_convertBoltValue).toList();
@@ -44,7 +46,7 @@ class Record {
     // Handle PsDataType wrapped values
     if (value is PsDataType) {
       final dartValue = value.dartValue;
-      
+
       // Convert Bolt-specific types to Neo4j types
       if (dartValue is BoltNode) {
         return Node.fromBolt(dartValue);
@@ -94,7 +96,9 @@ class Record {
       }
       return _values[keyOrIndex];
     } else {
-      throw ArgumentError('Key must be String or int, got ${keyOrIndex.runtimeType}');
+      throw ArgumentError(
+        'Key must be String or int, got ${keyOrIndex.runtimeType}',
+      );
     }
   }
 
@@ -277,12 +281,12 @@ class Record {
     }
 
     final value = _fieldMap[key];
-    
+
     // Special handling for dynamic type - allow null values
     if (T == dynamic) {
       return value as T;
     }
-    
+
     if (value == null) {
       throw UnexpectedNullException(key, T);
     }

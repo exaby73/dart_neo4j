@@ -50,10 +50,11 @@ class BoltSocketConfig {
 /// A low-level socket wrapper for Bolt protocol communication.
 class BoltSocket {
   final BoltSocketConfig _config;
-  
+
   Socket? _socket;
   BoltSocketState _state = BoltSocketState.disconnected;
-  final StreamController<Uint8List> _dataController = StreamController<Uint8List>.broadcast();
+  final StreamController<Uint8List> _dataController =
+      StreamController<Uint8List>.broadcast();
   StreamSubscription<Uint8List>? _socketSubscription;
   Completer<void>? _connectionCompleter;
 
@@ -67,7 +68,8 @@ class BoltSocket {
   bool get isConnected => _state == BoltSocketState.connected;
 
   /// Whether this socket is closed or failed.
-  bool get isClosed => _state == BoltSocketState.closed || _state == BoltSocketState.failed;
+  bool get isClosed =>
+      _state == BoltSocketState.closed || _state == BoltSocketState.failed;
 
   /// Stream of data received from the server.
   Stream<Uint8List> get dataStream => _dataController.stream;
@@ -81,7 +83,8 @@ class BoltSocket {
   /// Throws [ServiceUnavailableException] if the server is not available.
   /// Throws [SecurityException] if SSL/TLS handshake fails.
   Future<void> connect() async {
-    if (_state != BoltSocketState.disconnected && _state != BoltSocketState.failed) {
+    if (_state != BoltSocketState.disconnected &&
+        _state != BoltSocketState.failed) {
       throw ConnectionException('Cannot connect from state: $_state');
     }
 
@@ -91,7 +94,7 @@ class BoltSocket {
     try {
       // Establish socket connection
       _socket = await _createSocket();
-      
+
       // Set up data stream
       _socketSubscription = _socket!.listen(
         _onData,
@@ -112,7 +115,7 @@ class BoltSocket {
   Future<Socket> _createSocket() async {
     try {
       Socket socket;
-      
+
       if (_config.encrypted) {
         // Prepare SSL context with custom CA if provided
         SecurityContext? context;
@@ -121,7 +124,9 @@ class BoltSocket {
           context.setTrustedCertificates(_config.customCACertificatePath!);
         } else if (_config.customCACertificateBytes != null) {
           context = SecurityContext();
-          context.setTrustedCertificatesBytes(_config.customCACertificateBytes!);
+          context.setTrustedCertificatesBytes(
+            _config.customCACertificateBytes!,
+          );
         }
 
         // Determine certificate validation callback
@@ -151,7 +156,7 @@ class BoltSocket {
 
       // Configure socket
       socket.setOption(SocketOption.tcpNoDelay, true);
-      
+
       return socket;
     } on SocketException catch (e) {
       throw ServiceUnavailableException(
@@ -177,7 +182,9 @@ class BoltSocket {
   /// Throws [ConnectionException] if the connection is not ready.
   void send(Uint8List data) {
     if (!isConnected) {
-      throw ConnectionException('Cannot send data: connection not ready (state: $_state)');
+      throw ConnectionException(
+        'Cannot send data: connection not ready (state: $_state)',
+      );
     }
 
     try {
@@ -189,7 +196,8 @@ class BoltSocket {
 
   /// Closes the connection gracefully.
   Future<void> close() async {
-    if (_state == BoltSocketState.closed || _state == BoltSocketState.disconnecting) {
+    if (_state == BoltSocketState.closed ||
+        _state == BoltSocketState.disconnecting) {
       return;
     }
 
@@ -208,25 +216,22 @@ class BoltSocket {
   /// Handles socket errors.
   void _onError(Object error, StackTrace stackTrace) {
     _state = BoltSocketState.failed;
-    
+
     if (!_dataController.isClosed) {
       ConnectionException exception;
-      
+
       if (error is SocketException) {
         exception = ConnectionLostException(
           'Connection lost: ${error.message}',
           error,
         );
       } else {
-        exception = ConnectionException(
-          'Connection error: $error',
-          error,
-        );
+        exception = ConnectionException('Connection error: $error', error);
       }
-      
+
       _dataController.addError(exception, stackTrace);
     }
-    
+
     _cleanup();
   }
 
@@ -242,14 +247,14 @@ class BoltSocket {
   Future<void> _cleanup() async {
     await _socketSubscription?.cancel();
     _socketSubscription = null;
-    
+
     try {
       await _socket?.close();
     } catch (e) {
       // Ignore errors during cleanup
     }
     _socket = null;
-    
+
     if (!_dataController.isClosed) {
       await _dataController.close();
     }

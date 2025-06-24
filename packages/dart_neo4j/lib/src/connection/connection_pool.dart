@@ -57,9 +57,9 @@ class PooledConnection {
 
   /// Creates a new pooled connection.
   PooledConnection(this.connection)
-      : createdAt = DateTime.now(),
-        lastUsedAt = DateTime.now(),
-        inUse = false;
+    : createdAt = DateTime.now(),
+      lastUsedAt = DateTime.now(),
+      inUse = false;
 
   /// Whether this connection is idle.
   bool get isIdle => !inUse;
@@ -92,17 +92,19 @@ class ConnectionPool {
   final ParsedUri _uri;
   final AuthToken _auth;
   final ConnectionPoolConfig _config;
-  
-  final Queue<PooledConnection> _availableConnections = Queue<PooledConnection>();
+
+  final Queue<PooledConnection> _availableConnections =
+      Queue<PooledConnection>();
   final Set<PooledConnection> _allConnections = <PooledConnection>{};
-  final Queue<Completer<PooledConnection>> _waitingQueue = Queue<Completer<PooledConnection>>();
-  
+  final Queue<Completer<PooledConnection>> _waitingQueue =
+      Queue<Completer<PooledConnection>>();
+
   bool _closed = false;
   Timer? _cleanupTimer;
 
   /// Creates a new connection pool.
   ConnectionPool(this._uri, this._auth, [ConnectionPoolConfig? config])
-      : _config = config ?? const ConnectionPoolConfig() {
+    : _config = config ?? const ConnectionPoolConfig() {
     _startCleanupTimer();
   }
 
@@ -220,7 +222,9 @@ class ConnectionPool {
     while (_waitingQueue.isNotEmpty) {
       final completer = _waitingQueue.removeFirst();
       if (!completer.isCompleted) {
-        completer.completeError(const ServiceUnavailableException('Connection pool closed'));
+        completer.completeError(
+          const ServiceUnavailableException('Connection pool closed'),
+        );
       }
     }
 
@@ -239,7 +243,7 @@ class ConnectionPool {
   PooledConnection? _getAvailableConnection() {
     while (_availableConnections.isNotEmpty) {
       final connection = _availableConnections.removeFirst();
-      
+
       if (connection.connection.isClosed) {
         _removeConnection(connection);
         continue;
@@ -302,15 +306,17 @@ class ConnectionPool {
     if (needed > 0) {
       // Create connections asynchronously to maintain minimum size
       for (int i = 0; i < needed; i++) {
-        _createConnection().then((connection) {
-          if (!_closed) {
-            _availableConnections.add(connection);
-          } else {
-            connection.connection.close();
-          }
-        }).catchError((error) {
-          // Ignore errors during background connection creation
-        });
+        _createConnection()
+            .then((connection) {
+              if (!_closed) {
+                _availableConnections.add(connection);
+              } else {
+                connection.connection.close();
+              }
+            })
+            .catchError((error) {
+              // Ignore errors during background connection creation
+            });
       }
     }
   }
@@ -330,7 +336,8 @@ class ConnectionPool {
     final currentSize = _allConnections.length;
 
     for (final connection in _availableConnections) {
-      if (connection.isIdleFor(_config.maxIdleTime) && currentSize > _config.minSize) {
+      if (connection.isIdleFor(_config.maxIdleTime) &&
+          currentSize > _config.minSize) {
         toRemove.add(connection);
       }
     }

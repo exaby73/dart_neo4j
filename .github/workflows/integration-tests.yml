@@ -3,108 +3,108 @@ name: Integration Tests
 on:
   push:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   integration-tests:
     name: Test dart_neo4j with Neo4j containers
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        dart-version: ['3.8.0']
-    
+        dart-version: ["3.8.0"]
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Dart
-      uses: dart-lang/setup-dart@v1
-      with:
-        sdk: ${{ matrix.dart-version }}
-    
-    - name: Cache pub dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pub-cache
-          **/.dart_tool
-          **/pubspec.lock
-        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pub-
-    
-    - name: Install dpk
-      run: dart pub global activate dpk
-    
-    - name: Get dependencies
-      run: dpk get
-    
-    - name: Start Neo4j containers
-      run: |
-        docker-compose up -d --wait
-      env:
-        COMPOSE_HTTP_TIMEOUT: 120
-    
-    - name: Verify Neo4j containers are healthy
-      run: |
-        echo "Checking container status..."
-        docker-compose ps
-        
-        # Verify basic connectivity to each instance
-        echo "Testing neo4j-single connection..."
-        until docker exec neo4j-single cypher-shell -u neo4j -p password 'RETURN "single" as instance' 2>/dev/null; do
-          echo "Waiting for neo4j-single..."
-          sleep 5
-        done
-        
-        echo "Testing neo4j-single-ssl connection..."
-        until docker exec neo4j-single-ssl cypher-shell -u neo4j -p password 'RETURN "ssl" as instance' 2>/dev/null; do
-          echo "Waiting for neo4j-single-ssl..."
-          sleep 5
-        done
-        
-        echo "Testing neo4j-self-signed connection..."
-        until docker exec neo4j-self-signed cypher-shell -u neo4j -p password 'RETURN "self-signed" as instance' 2>/dev/null; do
-          echo "Waiting for neo4j-self-signed..."
-          sleep 5
-        done
-        
-        echo "Testing cluster connectivity..."
-        until docker exec neo4j-core1 cypher-shell -u neo4j -p password 'CALL dbms.cluster.overview() YIELD role RETURN role' 2>/dev/null; do
-          echo "Waiting for neo4j cluster..."
-          sleep 10
-        done
-        
-        echo "All Neo4j instances are ready!"
-    
-    - name: Set SSL certificates path
-      run: echo "SSL_CERTS_PATH=$(pwd)/ssl-certs" >> $GITHUB_ENV
-    
-    - name: Run dart_neo4j integration tests
-      run: dpk run test:neo4j
-      env:
-        SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
-    
-    - name: Stop Neo4j containers
-      if: always()
-      run: docker-compose down -v
-    
-    - name: Upload test results on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: integration-test-results-${{ matrix.dart-version }}
-        path: |
-          packages/dart_neo4j/test/
-          ssl-certs/
-        retention-days: 7
-    
-    - name: Upload Neo4j logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: neo4j-logs-${{ matrix.dart-version }}
-        path: |
-          packages/dart_neo4j/logs/
-        retention-days: 7
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.dart-version }}
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/.dart_tool
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dpk
+        run: dart pub global activate dpk
+
+      - name: Get dependencies
+        run: dpk get
+
+      - name: Start Neo4j containers
+        run: |
+          docker-compose up -d --wait
+        env:
+          COMPOSE_HTTP_TIMEOUT: 120
+
+      - name: Verify Neo4j containers are healthy
+        run: |
+          echo "Checking container status..."
+          docker-compose ps
+
+          # Verify basic connectivity to each instance
+          echo "Testing neo4j-single connection..."
+          until docker exec neo4j-single cypher-shell -u neo4j -p password 'RETURN "single" as instance' 2>/dev/null; do
+            echo "Waiting for neo4j-single..."
+            sleep 5
+          done
+
+          echo "Testing neo4j-single-ssl connection..."
+          until docker exec neo4j-single-ssl cypher-shell -u neo4j -p password 'RETURN "ssl" as instance' 2>/dev/null; do
+            echo "Waiting for neo4j-single-ssl..."
+            sleep 5
+          done
+
+          echo "Testing neo4j-self-signed connection..."
+          until docker exec neo4j-self-signed cypher-shell -u neo4j -p password 'RETURN "self-signed" as instance' 2>/dev/null; do
+            echo "Waiting for neo4j-self-signed..."
+            sleep 5
+          done
+
+          echo "Testing cluster connectivity..."
+          until docker exec neo4j-core1 cypher-shell -u neo4j -p password 'CALL dbms.cluster.overview() YIELD role RETURN role' 2>/dev/null; do
+            echo "Waiting for neo4j cluster..."
+            sleep 10
+          done
+
+          echo "All Neo4j instances are ready!"
+
+      - name: Set SSL certificates path
+        run: echo "SSL_CERTS_PATH=$(pwd)/ssl-certs" >> $GITHUB_ENV
+
+      - name: Run dart_neo4j integration tests
+        run: dpk run test:neo4j
+        env:
+          SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
+
+      - name: Stop Neo4j containers
+        if: always()
+        run: docker-compose down -v
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ matrix.dart-version }}
+          path: |
+            packages/dart_neo4j/test/
+            ssl-certs/
+          retention-days: 7
+
+      - name: Upload Neo4j logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neo4j-logs-${{ matrix.dart-version }}
+          path: |
+            packages/dart_neo4j/logs/
+          retention-days: 7

@@ -11,9 +11,7 @@ abstract class AuthToken {
 
   /// Creates authentication data for the Bolt HELLO message.
   Map<String, Object> toAuthData() {
-    final data = <String, Object>{
-      'scheme': scheme,
-    };
+    final data = <String, Object>{'scheme': scheme};
 
     if (principal != null) {
       data['principal'] = principal!;
@@ -64,11 +62,7 @@ class CustomAuthToken extends AuthToken {
   /// [scheme] - the authentication scheme
   /// [principal] - the principal (username) for authentication
   /// [properties] - additional properties for the authentication token
-  CustomAuthToken(
-    this._scheme, [
-    this._principal,
-    this._properties = const {},
-  ]);
+  CustomAuthToken(this._scheme, [this._principal, this._properties = const {}]);
 
   @override
   String get scheme => _scheme;

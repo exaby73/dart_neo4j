@@ -17,7 +17,8 @@ class Node {
   int get id => _boltNode.id.dartValue;
 
   /// The labels assigned to the node.
-  List<String> get labels => _boltNode.labels.map((label) => label.dartValue as String).toList();
+  List<String> get labels =>
+      _boltNode.labels.map((label) => label.dartValue as String).toList();
 
   /// The properties of the node.
   Map<String, dynamic> get properties {
@@ -35,7 +36,13 @@ class Node {
   T getProperty<T>(String name) {
     final stringName = PsString(name);
     if (!_boltNode.properties.containsKey(stringName)) {
-      throw FieldNotFoundException(name, _boltNode.properties.keys.map((k) => k.dartValue).cast<String>().toSet());
+      throw FieldNotFoundException(
+        name,
+        _boltNode.properties.keys
+            .map((k) => k.dartValue)
+            .cast<String>()
+            .toSet(),
+      );
     }
 
     final value = _boltNode.properties[stringName]!.dartValue;
@@ -123,7 +130,13 @@ class Relationship {
   T getProperty<T>(String name) {
     final stringName = PsString(name);
     if (!_boltRelationship.properties.containsKey(stringName)) {
-      throw FieldNotFoundException(name, _boltRelationship.properties.keys.map((k) => k.dartValue).cast<String>().toSet());
+      throw FieldNotFoundException(
+        name,
+        _boltRelationship.properties.keys
+            .map((k) => k.dartValue)
+            .cast<String>()
+            .toSet(),
+      );
     }
 
     final value = _boltRelationship.properties[stringName]!.dartValue;
@@ -174,7 +187,9 @@ class UnboundRelationship {
   const UnboundRelationship._(this._boltUnboundRelationship);
 
   /// Creates an unbound relationship from a Bolt unbound relationship.
-  factory UnboundRelationship.fromBolt(BoltUnboundRelationship boltUnboundRelationship) {
+  factory UnboundRelationship.fromBolt(
+    BoltUnboundRelationship boltUnboundRelationship,
+  ) {
     return UnboundRelationship._(boltUnboundRelationship);
   }
 
@@ -200,7 +215,13 @@ class UnboundRelationship {
   T getProperty<T>(String name) {
     final stringName = PsString(name);
     if (!_boltUnboundRelationship.properties.containsKey(stringName)) {
-      throw FieldNotFoundException(name, _boltUnboundRelationship.properties.keys.map((k) => k.dartValue).cast<String>().toSet());
+      throw FieldNotFoundException(
+        name,
+        _boltUnboundRelationship.properties.keys
+            .map((k) => k.dartValue)
+            .cast<String>()
+            .toSet(),
+      );
     }
 
     final value = _boltUnboundRelationship.properties[stringName]!.dartValue;
@@ -226,7 +247,8 @@ class UnboundRelationship {
   }
 
   /// The underlying Bolt unbound relationship.
-  BoltUnboundRelationship get boltUnboundRelationship => _boltUnboundRelationship;
+  BoltUnboundRelationship get boltUnboundRelationship =>
+      _boltUnboundRelationship;
 
   @override
   String toString() {
@@ -251,8 +273,18 @@ class Path {
 
   /// Creates a new path from a Bolt path.
   Path._(this._boltPath)
-      : _nodes = _boltPath.nodes.map((node) => Node.fromBolt(node as BoltNode)).toList(),
-        _relationships = _boltPath.relationships.map((rel) => UnboundRelationship.fromBolt(rel as BoltUnboundRelationship)).toList();
+    : _nodes =
+          _boltPath.nodes
+              .map((node) => Node.fromBolt(node as BoltNode))
+              .toList(),
+      _relationships =
+          _boltPath.relationships
+              .map(
+                (rel) => UnboundRelationship.fromBolt(
+                  rel as BoltUnboundRelationship,
+                ),
+              )
+              .toList();
 
   /// Creates a path from a Bolt path.
   factory Path.fromBolt(BoltPath boltPath) {
@@ -263,7 +295,8 @@ class Path {
   List<Node> get nodes => List.unmodifiable(_nodes);
 
   /// The relationships in the path.
-  List<UnboundRelationship> get relationships => List.unmodifiable(_relationships);
+  List<UnboundRelationship> get relationships =>
+      List.unmodifiable(_relationships);
 
   /// The length of the path (number of relationships).
   int get length => _relationships.length;

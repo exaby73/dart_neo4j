@@ -30,16 +30,12 @@ class SessionConfig {
   });
 
   /// Creates a read-only session configuration.
-  const SessionConfig.read({
-    this.database,
-    this.bookmarks = const [],
-  }) : accessMode = AccessMode.read;
+  const SessionConfig.read({this.database, this.bookmarks = const []})
+    : accessMode = AccessMode.read;
 
   /// Creates a read-write session configuration.
-  const SessionConfig.write({
-    this.database,
-    this.bookmarks = const [],
-  }) : accessMode = AccessMode.write;
+  const SessionConfig.write({this.database, this.bookmarks = const []})
+    : accessMode = AccessMode.write;
 
   @override
   String toString() {
@@ -65,7 +61,10 @@ abstract class Session {
   ///
   /// Throws [SessionExpiredException] if the session is closed.
   /// Throws [DatabaseException] if the query fails.
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]);
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]);
 
   /// Begins an explicit transaction.
   ///
@@ -85,7 +84,10 @@ abstract class Session {
   ///
   /// Throws [SessionExpiredException] if the session is closed.
   /// Throws [DatabaseException] if the transaction fails.
-  Future<T> executeRead<T>(ReadTransactionWork<T> work, [TransactionConfig? config]);
+  Future<T> executeRead<T>(
+    ReadTransactionWork<T> work, [
+    TransactionConfig? config,
+  ]);
 
   /// Executes a write transaction.
   ///
@@ -97,7 +99,10 @@ abstract class Session {
   ///
   /// Throws [SessionExpiredException] if the session is closed.
   /// Throws [DatabaseException] if the transaction fails.
-  Future<T> executeWrite<T>(WriteTransactionWork<T> work, [TransactionConfig? config]);
+  Future<T> executeWrite<T>(
+    WriteTransactionWork<T> work, [
+    TransactionConfig? config,
+  ]);
 
   /// Closes this session and releases any associated resources.
   ///
@@ -114,10 +119,7 @@ class TransactionConfig {
   final Map<String, dynamic> metadata;
 
   /// Creates a new transaction configuration.
-  const TransactionConfig({
-    this.timeout,
-    this.metadata = const {},
-  });
+  const TransactionConfig({this.timeout, this.metadata = const {}});
 
   @override
   String toString() {

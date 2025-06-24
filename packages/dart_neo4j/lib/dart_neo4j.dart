@@ -92,5 +92,5 @@ export 'src/exceptions/neo4j_exception.dart';
 export 'src/exceptions/connection_exception.dart';
 export 'src/exceptions/type_exception.dart';
 
-// For advanced users who need direct access to Bolt types, 
+// For advanced users who need direct access to Bolt types,
 // import 'package:dart_bolt/dart_bolt.dart' directly.

@@ -3,90 +3,90 @@ name: Code Quality
 on:
   push:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   analyze:
     name: Static Analysis
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        dart-version: ['3.8.0']
-    
+        dart-version: ["3.8.0"]
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Dart
-      uses: dart-lang/setup-dart@v1
-      with:
-        sdk: ${{ matrix.dart-version }}
-    
-    - name: Cache pub dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pub-cache
-          **/.dart_tool
-          **/pubspec.lock
-        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pub-
-    
-    - name: Install dpk
-      run: dart pub global activate dpk
-    
-    - name: Get dependencies
-      run: dpk get
-    
-    - name: Run static analysis
-      run: dpk run analyze
-    
-    - name: Check formatting
-      run: dart format --set-exit-if-changed .
-    
-    - name: Upload analysis results
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: analysis-results
-        path: |
-          packages/*/analysis_options.yaml
-        retention-days: 7
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.dart-version }}
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/.dart_tool
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dpk
+        run: dart pub global activate dpk
+
+      - name: Get dependencies
+        run: dpk get
+
+      - name: Run static analysis
+        run: dpk run analyze
+
+      - name: Check formatting
+        run: dpk run format
+
+      - name: Upload analysis results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-results
+          path: |
+            packages/*/analysis_options.yaml
+          retention-days: 7
 
   dependency-check:
     name: Dependency Check
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        dart-version: ['3.8.0']
-    
+        dart-version: ["3.8.0"]
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Dart
-      uses: dart-lang/setup-dart@v1
-      with:
-        sdk: ${{ matrix.dart-version }}
-    
-    - name: Install dpk
-      run: dart pub global activate dpk
-    
-    - name: Get dependencies
-      run: dpk get
-    
-    - name: Check for outdated dependencies
-      run: |
-        cd packages/dart_packstream && dart pub outdated --mode=null-safety
-        cd ../dart_bolt && dart pub outdated --mode=null-safety
-        cd ../dart_neo4j && dart pub outdated --mode=null-safety
-    
-    - name: Check for unused dependencies
-      run: |
-        dart pub global activate dependency_validator
-        cd packages/dart_packstream && dependency_validator
-        cd ../dart_bolt && dependency_validator
-        cd ../dart_neo4j && dependency_validator
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.dart-version }}
+
+      - name: Install dpk
+        run: dart pub global activate dpk
+
+      - name: Get dependencies
+        run: dpk get
+
+      - name: Check for outdated dependencies
+        run: |
+          cd packages/dart_packstream && dart pub outdated --mode=null-safety
+          cd ../dart_bolt && dart pub outdated --mode=null-safety
+          cd ../dart_neo4j && dart pub outdated --mode=null-safety
+
+      - name: Check for unused dependencies
+        run: |
+          dart pub global activate dependency_validator
+          cd packages/dart_packstream && dependency_validator
+          cd ../dart_bolt && dependency_validator
+          cd ../dart_neo4j && dependency_validator

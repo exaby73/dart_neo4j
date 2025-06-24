@@ -18,7 +18,10 @@ void main() {
       expect(exception.message, equals('Test message'));
       expect(exception.cause, equals(cause));
       expect(exception.toString(), contains('Neo4jException: Test message'));
-      expect(exception.toString(), contains('Caused by: Exception: Root cause'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Root cause'),
+      );
     });
   });
 
@@ -32,22 +35,50 @@ void main() {
     });
 
     test('creates exception with message and code', () {
-      const exception = DatabaseException('Database error', 'Neo.ClientError.Schema.ConstraintValidationFailed');
+      const exception = DatabaseException(
+        'Database error',
+        'Neo.ClientError.Schema.ConstraintValidationFailed',
+      );
       expect(exception.message, equals('Database error'));
-      expect(exception.code, equals('Neo.ClientError.Schema.ConstraintValidationFailed'));
-      expect(exception.toString(), contains('DatabaseException: Database error'));
-      expect(exception.toString(), contains('(Code: Neo.ClientError.Schema.ConstraintValidationFailed)'));
+      expect(
+        exception.code,
+        equals('Neo.ClientError.Schema.ConstraintValidationFailed'),
+      );
+      expect(
+        exception.toString(),
+        contains('DatabaseException: Database error'),
+      );
+      expect(
+        exception.toString(),
+        contains('(Code: Neo.ClientError.Schema.ConstraintValidationFailed)'),
+      );
     });
 
     test('creates exception with message, code, and cause', () {
       final cause = Exception('Root cause');
-      final exception = DatabaseException('Database error', 'Neo.ClientError.Schema.ConstraintValidationFailed', cause);
+      final exception = DatabaseException(
+        'Database error',
+        'Neo.ClientError.Schema.ConstraintValidationFailed',
+        cause,
+      );
       expect(exception.message, equals('Database error'));
-      expect(exception.code, equals('Neo.ClientError.Schema.ConstraintValidationFailed'));
+      expect(
+        exception.code,
+        equals('Neo.ClientError.Schema.ConstraintValidationFailed'),
+      );
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('DatabaseException: Database error'));
-      expect(exception.toString(), contains('(Code: Neo.ClientError.Schema.ConstraintValidationFailed)'));
-      expect(exception.toString(), contains('Caused by: Exception: Root cause'));
+      expect(
+        exception.toString(),
+        contains('DatabaseException: Database error'),
+      );
+      expect(
+        exception.toString(),
+        contains('(Code: Neo.ClientError.Schema.ConstraintValidationFailed)'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Root cause'),
+      );
     });
   });
 
@@ -65,7 +96,10 @@ void main() {
       expect(exception.message, equals('Client error'));
       expect(exception.cause, equals(cause));
       expect(exception.toString(), contains('ClientException: Client error'));
-      expect(exception.toString(), contains('Caused by: Exception: Root cause'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Root cause'),
+      );
     });
   });
 
@@ -75,26 +109,57 @@ void main() {
       expect(exception.message, equals('Transient error'));
       expect(exception.code, isNull);
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('TransientException: Transient error'));
+      expect(
+        exception.toString(),
+        equals('TransientException: Transient error'),
+      );
     });
 
     test('creates exception with message and code', () {
-      const exception = TransientException('Transient error', 'Neo.TransientError.Network.ConnectionPoolFull');
+      const exception = TransientException(
+        'Transient error',
+        'Neo.TransientError.Network.ConnectionPoolFull',
+      );
       expect(exception.message, equals('Transient error'));
-      expect(exception.code, equals('Neo.TransientError.Network.ConnectionPoolFull'));
-      expect(exception.toString(), contains('TransientException: Transient error'));
-      expect(exception.toString(), contains('(Code: Neo.TransientError.Network.ConnectionPoolFull)'));
+      expect(
+        exception.code,
+        equals('Neo.TransientError.Network.ConnectionPoolFull'),
+      );
+      expect(
+        exception.toString(),
+        contains('TransientException: Transient error'),
+      );
+      expect(
+        exception.toString(),
+        contains('(Code: Neo.TransientError.Network.ConnectionPoolFull)'),
+      );
     });
 
     test('creates exception with message, code, and cause', () {
       final cause = Exception('Root cause');
-      final exception = TransientException('Transient error', 'Neo.TransientError.Network.ConnectionPoolFull', cause);
+      final exception = TransientException(
+        'Transient error',
+        'Neo.TransientError.Network.ConnectionPoolFull',
+        cause,
+      );
       expect(exception.message, equals('Transient error'));
-      expect(exception.code, equals('Neo.TransientError.Network.ConnectionPoolFull'));
+      expect(
+        exception.code,
+        equals('Neo.TransientError.Network.ConnectionPoolFull'),
+      );
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('TransientException: Transient error'));
-      expect(exception.toString(), contains('(Code: Neo.TransientError.Network.ConnectionPoolFull)'));
-      expect(exception.toString(), contains('Caused by: Exception: Root cause'));
+      expect(
+        exception.toString(),
+        contains('TransientException: Transient error'),
+      );
+      expect(
+        exception.toString(),
+        contains('(Code: Neo.TransientError.Network.ConnectionPoolFull)'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Root cause'),
+      );
     });
   });
 
@@ -103,7 +168,10 @@ void main() {
       const exception = AuthenticationException('Authentication failed');
       expect(exception.message, equals('Authentication failed'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('AuthenticationException: Authentication failed'));
+      expect(
+        exception.toString(),
+        equals('AuthenticationException: Authentication failed'),
+      );
     });
 
     test('creates exception with message and cause', () {
@@ -111,8 +179,14 @@ void main() {
       final exception = AuthenticationException('Authentication failed', cause);
       expect(exception.message, equals('Authentication failed'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('AuthenticationException: Authentication failed'));
-      expect(exception.toString(), contains('Caused by: Exception: Invalid credentials'));
+      expect(
+        exception.toString(),
+        contains('AuthenticationException: Authentication failed'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Invalid credentials'),
+      );
     });
   });
 
@@ -121,7 +195,10 @@ void main() {
       const exception = AuthorizationException('Access denied');
       expect(exception.message, equals('Access denied'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('AuthorizationException: Access denied'));
+      expect(
+        exception.toString(),
+        equals('AuthorizationException: Access denied'),
+      );
     });
 
     test('creates exception with message and cause', () {
@@ -129,8 +206,14 @@ void main() {
       final exception = AuthorizationException('Access denied', cause);
       expect(exception.message, equals('Access denied'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('AuthorizationException: Access denied'));
-      expect(exception.toString(), contains('Caused by: Exception: Insufficient permissions'));
+      expect(
+        exception.toString(),
+        contains('AuthorizationException: Access denied'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Insufficient permissions'),
+      );
     });
   });
 
@@ -139,7 +222,10 @@ void main() {
       const exception = SessionExpiredException('Session expired');
       expect(exception.message, equals('Session expired'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('SessionExpiredException: Session expired'));
+      expect(
+        exception.toString(),
+        equals('SessionExpiredException: Session expired'),
+      );
     });
 
     test('creates exception with message and cause', () {
@@ -147,8 +233,14 @@ void main() {
       final exception = SessionExpiredException('Session expired', cause);
       expect(exception.message, equals('Session expired'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('SessionExpiredException: Session expired'));
-      expect(exception.toString(), contains('Caused by: Exception: Session timeout'));
+      expect(
+        exception.toString(),
+        contains('SessionExpiredException: Session expired'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Session timeout'),
+      );
     });
   });
 
@@ -157,7 +249,10 @@ void main() {
       const exception = TransactionClosedException('Transaction closed');
       expect(exception.message, equals('Transaction closed'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('TransactionClosedException: Transaction closed'));
+      expect(
+        exception.toString(),
+        equals('TransactionClosedException: Transaction closed'),
+      );
     });
 
     test('creates exception with message and cause', () {
@@ -165,8 +260,14 @@ void main() {
       final exception = TransactionClosedException('Transaction closed', cause);
       expect(exception.message, equals('Transaction closed'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('TransactionClosedException: Transaction closed'));
-      expect(exception.toString(), contains('Caused by: Exception: Transaction rollback'));
+      expect(
+        exception.toString(),
+        contains('TransactionClosedException: Transaction closed'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Transaction rollback'),
+      );
     });
   });
 
@@ -175,7 +276,10 @@ void main() {
       const exception = ConnectionException('Connection failed');
       expect(exception.message, equals('Connection failed'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('ConnectionException: Connection failed'));
+      expect(
+        exception.toString(),
+        equals('ConnectionException: Connection failed'),
+      );
     });
 
     test('creates exception with message and cause', () {
@@ -183,8 +287,14 @@ void main() {
       final exception = ConnectionException('Connection failed', cause);
       expect(exception.message, equals('Connection failed'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('ConnectionException: Connection failed'));
-      expect(exception.toString(), contains('Caused by: Exception: Network error'));
+      expect(
+        exception.toString(),
+        contains('ConnectionException: Connection failed'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Network error'),
+      );
     });
   });
 
@@ -193,16 +303,28 @@ void main() {
       const exception = ServiceUnavailableException('Service unavailable');
       expect(exception.message, equals('Service unavailable'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('ServiceUnavailableException: Service unavailable'));
+      expect(
+        exception.toString(),
+        equals('ServiceUnavailableException: Service unavailable'),
+      );
     });
 
     test('creates exception with message and cause', () {
       final cause = Exception('Server down');
-      final exception = ServiceUnavailableException('Service unavailable', cause);
+      final exception = ServiceUnavailableException(
+        'Service unavailable',
+        cause,
+      );
       expect(exception.message, equals('Service unavailable'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('ServiceUnavailableException: Service unavailable'));
-      expect(exception.toString(), contains('Caused by: Exception: Server down'));
+      expect(
+        exception.toString(),
+        contains('ServiceUnavailableException: Service unavailable'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Server down'),
+      );
     });
   });
 
@@ -212,28 +334,47 @@ void main() {
       expect(exception.message, equals('Connection timeout'));
       expect(exception.timeout, isNull);
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('ConnectionTimeoutException: Connection timeout'));
+      expect(
+        exception.toString(),
+        equals('ConnectionTimeoutException: Connection timeout'),
+      );
     });
 
     test('creates exception with message and timeout', () {
       const timeout = Duration(seconds: 30);
-      const exception = ConnectionTimeoutException('Connection timeout', timeout);
+      const exception = ConnectionTimeoutException(
+        'Connection timeout',
+        timeout,
+      );
       expect(exception.message, equals('Connection timeout'));
       expect(exception.timeout, equals(timeout));
-      expect(exception.toString(), contains('ConnectionTimeoutException: Connection timeout'));
+      expect(
+        exception.toString(),
+        contains('ConnectionTimeoutException: Connection timeout'),
+      );
       expect(exception.toString(), contains('(Timeout: 30000ms)'));
     });
 
     test('creates exception with message, timeout, and cause', () {
       const timeout = Duration(seconds: 30);
       final cause = Exception('Network slow');
-      final exception = ConnectionTimeoutException('Connection timeout', timeout, cause);
+      final exception = ConnectionTimeoutException(
+        'Connection timeout',
+        timeout,
+        cause,
+      );
       expect(exception.message, equals('Connection timeout'));
       expect(exception.timeout, equals(timeout));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('ConnectionTimeoutException: Connection timeout'));
+      expect(
+        exception.toString(),
+        contains('ConnectionTimeoutException: Connection timeout'),
+      );
       expect(exception.toString(), contains('(Timeout: 30000ms)'));
-      expect(exception.toString(), contains('Caused by: Exception: Network slow'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Network slow'),
+      );
     });
   });
 
@@ -242,7 +383,10 @@ void main() {
       const exception = ConnectionLostException('Connection lost');
       expect(exception.message, equals('Connection lost'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), equals('ConnectionLostException: Connection lost'));
+      expect(
+        exception.toString(),
+        equals('ConnectionLostException: Connection lost'),
+      );
     });
 
     test('creates exception with message and cause', () {
@@ -250,8 +394,14 @@ void main() {
       final exception = ConnectionLostException('Connection lost', cause);
       expect(exception.message, equals('Connection lost'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('ConnectionLostException: Connection lost'));
-      expect(exception.toString(), contains('Caused by: Exception: Network disconnect'));
+      expect(
+        exception.toString(),
+        contains('ConnectionLostException: Connection lost'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Network disconnect'),
+      );
     });
   });
 
@@ -268,8 +418,14 @@ void main() {
       final exception = SecurityException('Security error', cause);
       expect(exception.message, equals('Security error'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('SecurityException: Security error'));
-      expect(exception.toString(), contains('Caused by: Exception: TLS handshake failed'));
+      expect(
+        exception.toString(),
+        contains('SecurityException: Security error'),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: TLS handshake failed'),
+      );
     });
   });
 
@@ -286,7 +442,10 @@ void main() {
       const exception = ProtocolException('Protocol error', 4);
       expect(exception.message, equals('Protocol error'));
       expect(exception.version, equals(4));
-      expect(exception.toString(), contains('ProtocolException: Protocol error'));
+      expect(
+        exception.toString(),
+        contains('ProtocolException: Protocol error'),
+      );
       expect(exception.toString(), contains('(Version: 4)'));
     });
 
@@ -296,9 +455,15 @@ void main() {
       expect(exception.message, equals('Protocol error'));
       expect(exception.version, equals(4));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('ProtocolException: Protocol error'));
+      expect(
+        exception.toString(),
+        contains('ProtocolException: Protocol error'),
+      );
       expect(exception.toString(), contains('(Version: 4)'));
-      expect(exception.toString(), contains('Caused by: Exception: Unsupported version'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Unsupported version'),
+      );
     });
   });
 
@@ -308,19 +473,32 @@ void main() {
       expect(exception.message, equals('Invalid URI'));
       expect(exception.uri, equals('invalid://uri'));
       expect(exception.cause, isNull);
-      expect(exception.toString(), contains('InvalidUriException: Invalid URI'));
+      expect(
+        exception.toString(),
+        contains('InvalidUriException: Invalid URI'),
+      );
       expect(exception.toString(), contains('(URI: invalid://uri)'));
     });
 
     test('creates exception with message, uri, and cause', () {
       final cause = Exception('Malformed URI');
-      final exception = InvalidUriException('Invalid URI', 'invalid://uri', cause);
+      final exception = InvalidUriException(
+        'Invalid URI',
+        'invalid://uri',
+        cause,
+      );
       expect(exception.message, equals('Invalid URI'));
       expect(exception.uri, equals('invalid://uri'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('InvalidUriException: Invalid URI'));
+      expect(
+        exception.toString(),
+        contains('InvalidUriException: Invalid URI'),
+      );
       expect(exception.toString(), contains('(URI: invalid://uri)'));
-      expect(exception.toString(), contains('Caused by: Exception: Malformed URI'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Malformed URI'),
+      );
     });
   });
 
@@ -338,7 +516,10 @@ void main() {
       expect(exception.message, equals('Type error'));
       expect(exception.cause, equals(cause));
       expect(exception.toString(), contains('TypeException: Type error'));
-      expect(exception.toString(), contains('Caused by: Exception: Type conversion failed'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Type conversion failed'),
+      );
     });
   });
 
@@ -347,8 +528,16 @@ void main() {
       const exception = FieldNotFoundException('missingField');
       expect(exception.fieldName, equals('missingField'));
       expect(exception.availableFields, isNull);
-      expect(exception.message, equals('Field "missingField" not found in record'));
-      expect(exception.toString(), contains('FieldNotFoundException: Field "missingField" not found in record'));
+      expect(
+        exception.message,
+        equals('Field "missingField" not found in record'),
+      );
+      expect(
+        exception.toString(),
+        contains(
+          'FieldNotFoundException: Field "missingField" not found in record',
+        ),
+      );
     });
 
     test('creates exception with field name and available fields', () {
@@ -356,20 +545,40 @@ void main() {
       const exception = FieldNotFoundException('missingField', availableFields);
       expect(exception.fieldName, equals('missingField'));
       expect(exception.availableFields, equals(availableFields));
-      expect(exception.toString(), contains('FieldNotFoundException: Field "missingField" not found in record'));
-      expect(exception.toString(), contains('Available fields: name, age, email'));
+      expect(
+        exception.toString(),
+        contains(
+          'FieldNotFoundException: Field "missingField" not found in record',
+        ),
+      );
+      expect(
+        exception.toString(),
+        contains('Available fields: name, age, email'),
+      );
     });
 
     test('creates exception with field name, available fields, and cause', () {
       const availableFields = {'name', 'age'};
       final cause = Exception('Field access error');
-      final exception = FieldNotFoundException('missingField', availableFields, cause);
+      final exception = FieldNotFoundException(
+        'missingField',
+        availableFields,
+        cause,
+      );
       expect(exception.fieldName, equals('missingField'));
       expect(exception.availableFields, equals(availableFields));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('FieldNotFoundException: Field "missingField" not found in record'));
+      expect(
+        exception.toString(),
+        contains(
+          'FieldNotFoundException: Field "missingField" not found in record',
+        ),
+      );
       expect(exception.toString(), contains('Available fields: name, age'));
-      expect(exception.toString(), contains('Caused by: Exception: Field access error'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Field access error'),
+      );
     });
   });
 
@@ -380,8 +589,16 @@ void main() {
       expect(exception.expectedType, equals(int));
       expect(exception.actualType, equals(String));
       expect(exception.actualValue, isNull);
-      expect(exception.message, equals('Field "age" expected type int but got String'));
-      expect(exception.toString(), contains('TypeMismatchException: Field "age" expected type int but got String'));
+      expect(
+        exception.message,
+        equals('Field "age" expected type int but got String'),
+      );
+      expect(
+        exception.toString(),
+        contains(
+          'TypeMismatchException: Field "age" expected type int but got String',
+        ),
+      );
     });
 
     test('creates exception with field name, types, and value', () {
@@ -390,21 +607,40 @@ void main() {
       expect(exception.expectedType, equals(int));
       expect(exception.actualType, equals(String));
       expect(exception.actualValue, equals('thirty'));
-      expect(exception.toString(), contains('TypeMismatchException: Field "age" expected type int but got String'));
+      expect(
+        exception.toString(),
+        contains(
+          'TypeMismatchException: Field "age" expected type int but got String',
+        ),
+      );
       expect(exception.toString(), contains('(value: thirty)'));
     });
 
     test('creates exception with field name, types, value, and cause', () {
       final cause = Exception('Conversion error');
-      final exception = TypeMismatchException('age', int, String, 'thirty', cause);
+      final exception = TypeMismatchException(
+        'age',
+        int,
+        String,
+        'thirty',
+        cause,
+      );
       expect(exception.fieldName, equals('age'));
       expect(exception.expectedType, equals(int));
       expect(exception.actualType, equals(String));
       expect(exception.actualValue, equals('thirty'));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('TypeMismatchException: Field "age" expected type int but got String'));
+      expect(
+        exception.toString(),
+        contains(
+          'TypeMismatchException: Field "age" expected type int but got String',
+        ),
+      );
       expect(exception.toString(), contains('(value: thirty)'));
-      expect(exception.toString(), contains('Caused by: Exception: Conversion error'));
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Conversion error'),
+      );
     });
   });
 
@@ -413,8 +649,16 @@ void main() {
       final exception = UnexpectedNullException('name', String);
       expect(exception.fieldName, equals('name'));
       expect(exception.expectedType, equals(String));
-      expect(exception.message, equals('Field "name" expected non-null String but got null'));
-      expect(exception.toString(), contains('UnexpectedNullException: Field "name" expected non-null String but got null'));
+      expect(
+        exception.message,
+        equals('Field "name" expected non-null String but got null'),
+      );
+      expect(
+        exception.toString(),
+        contains(
+          'UnexpectedNullException: Field "name" expected non-null String but got null',
+        ),
+      );
     });
 
     test('creates exception with field name, type, and cause', () {
@@ -423,8 +667,16 @@ void main() {
       expect(exception.fieldName, equals('name'));
       expect(exception.expectedType, equals(String));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('UnexpectedNullException: Field "name" expected non-null String but got null'));
-      expect(exception.toString(), contains('Caused by: Exception: Null validation failed'));
+      expect(
+        exception.toString(),
+        contains(
+          'UnexpectedNullException: Field "name" expected non-null String but got null',
+        ),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Null validation failed'),
+      );
     });
   });
 
@@ -433,8 +685,16 @@ void main() {
       final exception = ConversionException('not a number', int);
       expect(exception.value, equals('not a number'));
       expect(exception.targetType, equals(int));
-      expect(exception.message, equals('Cannot convert value not a number to type int'));
-      expect(exception.toString(), contains('ConversionException: Cannot convert value not a number to type int'));
+      expect(
+        exception.message,
+        equals('Cannot convert value not a number to type int'),
+      );
+      expect(
+        exception.toString(),
+        contains(
+          'ConversionException: Cannot convert value not a number to type int',
+        ),
+      );
     });
 
     test('creates exception with value, target type, and cause', () {
@@ -443,15 +703,26 @@ void main() {
       expect(exception.value, equals('not a number'));
       expect(exception.targetType, equals(int));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('ConversionException: Cannot convert value not a number to type int'));
-      expect(exception.toString(), contains('Caused by: Exception: Parsing failed'));
+      expect(
+        exception.toString(),
+        contains(
+          'ConversionException: Cannot convert value not a number to type int',
+        ),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Parsing failed'),
+      );
     });
 
     test('handles null value', () {
       final exception = ConversionException(null, int);
       expect(exception.value, isNull);
       expect(exception.targetType, equals(int));
-      expect(exception.toString(), contains('ConversionException: Cannot convert value null to type int'));
+      expect(
+        exception.toString(),
+        contains('ConversionException: Cannot convert value null to type int'),
+      );
     });
   });
 
@@ -460,8 +731,16 @@ void main() {
       const exception = IndexOutOfRangeException(5, 3);
       expect(exception.index, equals(5));
       expect(exception.maxIndex, equals(3));
-      expect(exception.message, equals('Index 5 is out of range. Valid range: 0 to 3'));
-      expect(exception.toString(), contains('IndexOutOfRangeException: Index 5 is out of range. Valid range: 0 to 3'));
+      expect(
+        exception.message,
+        equals('Index 5 is out of range. Valid range: 0 to 3'),
+      );
+      expect(
+        exception.toString(),
+        contains(
+          'IndexOutOfRangeException: Index 5 is out of range. Valid range: 0 to 3',
+        ),
+      );
     });
 
     test('creates exception with index, max index, and cause', () {
@@ -470,8 +749,16 @@ void main() {
       expect(exception.index, equals(5));
       expect(exception.maxIndex, equals(3));
       expect(exception.cause, equals(cause));
-      expect(exception.toString(), contains('IndexOutOfRangeException: Index 5 is out of range. Valid range: 0 to 3'));
-      expect(exception.toString(), contains('Caused by: Exception: Array bounds check failed'));
+      expect(
+        exception.toString(),
+        contains(
+          'IndexOutOfRangeException: Index 5 is out of range. Valid range: 0 to 3',
+        ),
+      );
+      expect(
+        exception.toString(),
+        contains('Caused by: Exception: Array bounds check failed'),
+      );
     });
   });
 
@@ -484,15 +771,24 @@ void main() {
       expect(const AuthorizationException('test'), isA<Neo4jException>());
       expect(const SessionExpiredException('test'), isA<Neo4jException>());
       expect(const TransactionClosedException('test'), isA<Neo4jException>());
-      
+
       expect(const ConnectionException('test'), isA<Neo4jException>());
-      expect(const ServiceUnavailableException('test'), isA<ConnectionException>());
-      expect(const ConnectionTimeoutException('test'), isA<ConnectionException>());
+      expect(
+        const ServiceUnavailableException('test'),
+        isA<ConnectionException>(),
+      );
+      expect(
+        const ConnectionTimeoutException('test'),
+        isA<ConnectionException>(),
+      );
       expect(const ConnectionLostException('test'), isA<ConnectionException>());
       expect(const SecurityException('test'), isA<ConnectionException>());
       expect(const ProtocolException('test'), isA<ConnectionException>());
-      expect(const InvalidUriException('test', 'uri'), isA<ConnectionException>());
-      
+      expect(
+        const InvalidUriException('test', 'uri'),
+        isA<ConnectionException>(),
+      );
+
       expect(const TypeException('test'), isA<Neo4jException>());
       expect(const FieldNotFoundException('field'), isA<TypeException>());
       expect(TypeMismatchException('field', int, String), isA<TypeException>());

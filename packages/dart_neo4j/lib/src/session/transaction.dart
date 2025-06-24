@@ -25,7 +25,9 @@ abstract class Transaction {
   bool get isActive => state == TransactionState.active;
 
   /// Whether this transaction is closed (committed or rolled back).
-  bool get isClosed => state == TransactionState.committed || state == TransactionState.rolledBack;
+  bool get isClosed =>
+      state == TransactionState.committed ||
+      state == TransactionState.rolledBack;
 
   /// Whether this transaction is marked for rollback.
   bool get isMarkedForRollback => state == TransactionState.markedForRollback;
@@ -37,7 +39,10 @@ abstract class Transaction {
   ///
   /// Throws [TransactionClosedException] if the transaction is closed.
   /// Throws [DatabaseException] if the query fails.
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]);
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]);
 
   /// Commits this transaction.
   ///
@@ -63,7 +68,10 @@ abstract class Transaction {
 /// A read-only transaction that can only execute read queries.
 abstract class ReadTransaction extends Transaction {
   @override
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]) {
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) {
     if (isClosed) {
       throw const TransactionClosedException('Transaction is closed');
     }
@@ -75,7 +83,10 @@ abstract class ReadTransaction extends Transaction {
 /// A read-write transaction that can execute both read and write queries.
 abstract class WriteTransaction extends Transaction {
   @override
-  Future<Result> run(String cypher, [Map<String, dynamic> parameters = const {}]) {
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) {
     if (isClosed) {
       throw const TransactionClosedException('Transaction is closed');
     }
@@ -88,7 +99,9 @@ abstract class WriteTransaction extends Transaction {
 typedef TransactionWork<T> = Future<T> Function(Transaction transaction);
 
 /// Function type for read transaction work.
-typedef ReadTransactionWork<T> = Future<T> Function(ReadTransaction transaction);
+typedef ReadTransactionWork<T> =
+    Future<T> Function(ReadTransaction transaction);
 
 /// Function type for write transaction work.
-typedef WriteTransactionWork<T> = Future<T> Function(WriteTransaction transaction);
+typedef WriteTransactionWork<T> =
+    Future<T> Function(WriteTransaction transaction);
