@@ -42,31 +42,43 @@ jobs:
 
       - name: Start Neo4j containers
         run: |
-          # Start certificate generator first and wait for certificates to be created
+          # Check if ssl-certs directory exists at all
+          echo "Checking for ssl-certs directory before starting containers:"
+          ls -la . | grep ssl || echo "No ssl-certs directory found"
+          
+          # Start certificate generator first
+          echo "Starting SSL certificate generator..."
           docker compose up -d ssl-cert-generator
+          
+          # Check container status
+          echo "SSL cert generator container status:"
+          docker compose ps ssl-cert-generator
+          
+          # Check logs
+          echo "SSL cert generator logs:"
+          docker compose logs ssl-cert-generator
           
           # Wait for certificates to be generated
           echo "Waiting for SSL certificates to be generated..."
           for i in {1..30}; do
+            echo "Checking for certificates... ($i/30)"
+            sudo find . -name "ssl-certs" -type d 2>/dev/null || echo "No ssl-certs directory found anywhere"
+            sudo find . -name "*.pem" 2>/dev/null || echo "No .pem files found"
+            
             if [ -f ssl-certs/ca-cert.pem ] && [ -f ssl-certs/server-cert.pem ] && [ -f ssl-certs/self-signed-cert.pem ]; then
               echo "SSL certificates found!"
               break
             fi
-            echo "Waiting for certificates... ($i/30)"
             sleep 2
           done
           
-          # Fix certificate permissions for the runner user
-          echo "Fixing certificate permissions..."
-          echo "Before fixing permissions:"
-          sudo ls -la ssl-certs/ || echo "Cannot list ssl-certs directory"
+          # Check what actually got created
+          echo "Final check - what's in the current directory:"
+          sudo ls -la .
           
-          sudo chown -R runner:docker ssl-certs/ || sudo chown -R $USER:$USER ssl-certs/
-          sudo chmod -R 755 ssl-certs/
-          sudo chmod -R 644 ssl-certs/*.pem
-          
-          echo "After fixing permissions:"
-          ls -la ssl-certs/
+          # Try to find ssl-certs anywhere
+          echo "Searching for ssl-certs directory:"
+          sudo find /home/runner/work -name "ssl-certs" -type d 2>/dev/null || echo "ssl-certs not found in workspace"
 
           echo "Starting all Neo4j containers..."
           docker compose up -d
