@@ -58,8 +58,14 @@ jobs:
           
           # Fix certificate permissions for the runner user
           echo "Fixing certificate permissions..."
+          echo "Before fixing permissions:"
+          sudo ls -la ssl-certs/ || echo "Cannot list ssl-certs directory"
+          
           sudo chown -R runner:docker ssl-certs/ || sudo chown -R $USER:$USER ssl-certs/
+          sudo chmod -R 755 ssl-certs/
           sudo chmod -R 644 ssl-certs/*.pem
+          
+          echo "After fixing permissions:"
           ls -la ssl-certs/
 
           echo "Starting all Neo4j containers..."
