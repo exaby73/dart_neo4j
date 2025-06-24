@@ -41,7 +41,9 @@ class SSLTestHelper {
     // Debug: print file info before reading
     try {
       final stat = await caCertFile.stat();
-      print('CA cert file stats: mode=${stat.mode.toRadixString(8)}, size=${stat.size}, accessed=${stat.accessed}, modified=${stat.modified}');
+      print(
+        'CA cert file stats: mode=${stat.mode.toRadixString(8)}, size=${stat.size}, accessed=${stat.accessed}, modified=${stat.modified}',
+      );
     } catch (e) {
       print('Error getting CA cert file stats: $e');
     }
@@ -117,7 +119,7 @@ class SSLTestHelper {
     final caCertFile = File(caCertPath);
     final exists = await caCertFile.exists();
     print('SSL certificates check: path=$caCertPath, exists=$exists');
-    
+
     // Debug: print directory contents and permissions
     final sslDir = Directory(sslCertsPath);
     if (await sslDir.exists()) {
@@ -125,7 +127,9 @@ class SSLTestHelper {
       try {
         await for (final entity in sslDir.list()) {
           final stat = await entity.stat();
-          print('  ${entity.path} - type: ${stat.type}, mode: ${stat.mode.toRadixString(8)}, size: ${stat.size}');
+          print(
+            '  ${entity.path} - type: ${stat.type}, mode: ${stat.mode.toRadixString(8)}, size: ${stat.size}',
+          );
         }
       } catch (e) {
         print('  Error listing directory: $e');
@@ -133,7 +137,7 @@ class SSLTestHelper {
     } else {
       print('SSL certificates directory does not exist: $sslCertsPath');
     }
-    
+
     return exists;
   }
 }

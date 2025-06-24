@@ -45,6 +45,18 @@ jobs:
           echo "Generating SSL certificates..."
           chmod +x scripts/generate-ssl-certs.sh
           ./scripts/generate-ssl-certs.sh
+          
+          echo "Setting explicit permissions for CI:"
+          chmod 755 ssl-certs
+          chmod 644 ssl-certs/*
+          
+          echo "Verifying permissions:"
+          ls -la ssl-certs/
+          
+          echo "Testing file access as current user:"
+          whoami
+          id
+          cat ssl-certs/ca-cert.pem | head -3
 
       - name: Start Neo4j containers
         run: |
