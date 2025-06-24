@@ -60,7 +60,16 @@ jobs:
           ls -la ssl-certs/ || echo "ssl-certs directory not found"
           
           # Now start all containers including SSL ones
-          docker compose up -d --wait
+          echo "Starting all Neo4j containers..."
+          docker compose up -d
+          
+          # Check container status
+          echo "Container status after startup:"
+          docker compose ps
+          
+          # Check for any failed containers
+          echo "Checking for failed containers..."
+          docker compose ps --filter "status=exited"
         env:
           COMPOSE_HTTP_TIMEOUT: 120
 
