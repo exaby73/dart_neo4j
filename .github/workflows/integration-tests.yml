@@ -42,21 +42,41 @@ jobs:
 
       - name: Generate SSL certificates
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Contents before generation:"
+          ls -la
+          
           echo "Generating SSL certificates..."
           chmod +x scripts/generate-ssl-certs.sh
           ./scripts/generate-ssl-certs.sh
           
-          echo "Setting explicit permissions for CI:"
-          chmod 755 ssl-certs
-          chmod 644 ssl-certs/*
+          echo "Contents after generation:"
+          ls -la
           
-          echo "Verifying permissions:"
-          ls -la ssl-certs/
-          
-          echo "Testing file access as current user:"
-          whoami
-          id
-          cat ssl-certs/ca-cert.pem | head -3
+          if [ -d ssl-certs ]; then
+            echo "SSL certs directory exists, checking permissions:"
+            ls -ld ssl-certs/
+            echo "Setting explicit permissions for CI:"
+            chmod -v 755 ssl-certs
+            chmod -v 644 ssl-certs/* 2>/dev/null || echo "No files to chmod in ssl-certs"
+            
+            echo "Final permissions after chmod:"
+            ls -la ssl-certs/
+            
+            echo "Testing file access as current user:"
+            whoami
+            id
+            if [ -f ssl-certs/ca-cert.pem ]; then
+              echo "ca-cert.pem exists, trying to read first 3 lines:"
+              head -3 ssl-certs/ca-cert.pem || echo "Failed to read ca-cert.pem"
+            else
+              echo "ca-cert.pem does not exist"
+            fi
+          else
+            echo "ERROR: ssl-certs directory was not created!"
+            echo "Script might have failed. Let's check the script exists:"
+            ls -la scripts/
+          fi
 
       - name: Start Neo4j containers
         run: |
@@ -95,7 +115,15 @@ jobs:
           echo "SSL containers status checked - Dart tests will handle SSL connectivity."
 
       - name: Run dart_neo4j integration tests
-        run: dpk run test:neo4j
+        run: |
+          echo "Test step working directory: $(pwd)"
+          echo "SSL_CERTS_PATH: $SSL_CERTS_PATH"
+          echo "Checking if SSL certs exist at specified path:"
+          ls -la "$SSL_CERTS_PATH" 2>/dev/null || echo "Directory not found at $SSL_CERTS_PATH"
+          echo "Checking if SSL certs exist in current directory:"
+          ls -la ssl-certs/ 2>/dev/null || echo "Directory not found at ./ssl-certs"
+          echo "Running tests..."
+          dpk run test:neo4j
         env:
           SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
 

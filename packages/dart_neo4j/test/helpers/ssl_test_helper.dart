@@ -7,6 +7,13 @@ import 'package:dart_neo4j/dart_neo4j.dart';
 class SSLTestHelper {
   /// Path to the project's SSL certificates directory
   static String get sslCertsPath {
+    // Debug: print all SSL-related environment variables
+    print('Platform.environment SSL debug:');
+    print('  SSL_CERTS_PATH: ${Platform.environment['SSL_CERTS_PATH']}');
+    print('  PWD: ${Platform.environment['PWD']}');
+    print('  GITHUB_WORKSPACE: ${Platform.environment['GITHUB_WORKSPACE']}');
+    print('  Directory.current.path: ${Directory.current.path}');
+
     // Use environment variable (set by CI) or fallback to relative path
     final envPath = Platform.environment['SSL_CERTS_PATH'];
     if (envPath != null) {
