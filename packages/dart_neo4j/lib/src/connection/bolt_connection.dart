@@ -31,7 +31,13 @@ class BoltConnection {
   StreamSubscription<Uint8List>? _dataSubscription;
 
   /// Creates a new Bolt connection.
-  BoltConnection(this._uri, this._auth, {Duration? connectionTimeout, String? customCACertificatePath, bool Function(X509Certificate)? certificateValidator}) {
+  BoltConnection(
+    this._uri,
+    this._auth, {
+    Duration? connectionTimeout,
+    String? customCACertificatePath,
+    bool Function(X509Certificate)? certificateValidator,
+  }) {
     _socket = BoltSocket(
       BoltSocketConfig(
         host: _uri.host,

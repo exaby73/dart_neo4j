@@ -19,14 +19,14 @@ class ResultSummary {
     Duration? resultConsumedAfter,
     String? database,
     required List<String> notifications,
-  })  : _query = query,
-        _parameters = parameters,
-        _queryType = queryType,
-        _counters = counters,
-        _resultAvailableAfter = resultAvailableAfter,
-        _resultConsumedAfter = resultConsumedAfter,
-        _database = database,
-        _notifications = notifications;
+  }) : _query = query,
+       _parameters = parameters,
+       _queryType = queryType,
+       _counters = counters,
+       _resultAvailableAfter = resultAvailableAfter,
+       _resultConsumedAfter = resultConsumedAfter,
+       _database = database,
+       _notifications = notifications;
 
   /// Creates a result summary from Neo4j server metadata.
   factory ResultSummary.fromMetadata(
@@ -46,10 +46,15 @@ class ResultSummary {
 
     final queryType = metadata['type'] as String? ?? 'unknown';
     final stats = metadata['stats'] as Map<String, dynamic>? ?? {};
-    final resultAvailableAfter = _parseDuration(metadata['result_available_after']);
-    final resultConsumedAfter = _parseDuration(metadata['result_consumed_after']);
+    final resultAvailableAfter = _parseDuration(
+      metadata['result_available_after'],
+    );
+    final resultConsumedAfter = _parseDuration(
+      metadata['result_consumed_after'],
+    );
     final database = metadata['db'] as String?;
-    final notifications = (metadata['notifications'] as List?)?.cast<String>() ?? <String>[];
+    final notifications =
+        (metadata['notifications'] as List?)?.cast<String>() ?? <String>[];
 
     return ResultSummary._(
       query: query,
@@ -107,10 +112,12 @@ class ResultSummary {
   int get nodesDeleted => _counters['nodes-deleted'] as int? ?? 0;
 
   /// The number of relationships created.
-  int get relationshipsCreated => _counters['relationships-created'] as int? ?? 0;
+  int get relationshipsCreated =>
+      _counters['relationships-created'] as int? ?? 0;
 
   /// The number of relationships deleted.
-  int get relationshipsDeleted => _counters['relationships-deleted'] as int? ?? 0;
+  int get relationshipsDeleted =>
+      _counters['relationships-deleted'] as int? ?? 0;
 
   /// The number of properties set.
   int get propertiesSet => _counters['properties-set'] as int? ?? 0;
@@ -163,8 +170,12 @@ class ResultSummary {
       final updates = <String>[];
       if (nodesCreated > 0) updates.add('nodes-created: $nodesCreated');
       if (nodesDeleted > 0) updates.add('nodes-deleted: $nodesDeleted');
-      if (relationshipsCreated > 0) updates.add('relationships-created: $relationshipsCreated');
-      if (relationshipsDeleted > 0) updates.add('relationships-deleted: $relationshipsDeleted');
+      if (relationshipsCreated > 0) {
+        updates.add('relationships-created: $relationshipsCreated');
+      }
+      if (relationshipsDeleted > 0) {
+        updates.add('relationships-deleted: $relationshipsDeleted');
+      }
       if (propertiesSet > 0) updates.add('properties-set: $propertiesSet');
       if (labelsAdded > 0) updates.add('labels-added: $labelsAdded');
       if (labelsRemoved > 0) updates.add('labels-removed: $labelsRemoved');
@@ -172,7 +183,9 @@ class ResultSummary {
       buffer.write('}');
     }
     if (resultAvailableAfter != null) {
-      buffer.write(', resultAvailableAfter: ${resultAvailableAfter!.inMilliseconds}ms');
+      buffer.write(
+        ', resultAvailableAfter: ${resultAvailableAfter!.inMilliseconds}ms',
+      );
     }
     if (database != null) {
       buffer.write(', database: $database');

@@ -67,13 +67,13 @@ abstract class Neo4jDriver {
   }) {
     // Parse the URI
     final parsedUri = UriParser.parse(uri);
-    
+
     // Use default auth if none provided
     final authToken = auth ?? NoAuth();
-    
+
     // Use default config if none provided
     final driverConfig = config ?? const DriverConfig();
-    
+
     // Create the appropriate driver implementation
     return _Neo4jDriverImpl(parsedUri, authToken, driverConfig);
   }
@@ -119,16 +119,16 @@ class _Neo4jDriverImpl implements Neo4jDriver {
   bool _isClosed = false;
 
   _Neo4jDriverImpl(this._uri, this._auth, this._config)
-      : _connectionPool = ConnectionPool(
-          _uri,
-          _auth,
-          ConnectionPoolConfig(
-            maxSize: _config.maxConnectionPoolSize,
-            connectionTimeout: _config.connectionTimeout,
-            customCACertificatePath: _config.customCACertificatePath,
-            certificateValidator: _config.certificateValidator,
-          ),
-        );
+    : _connectionPool = ConnectionPool(
+        _uri,
+        _auth,
+        ConnectionPoolConfig(
+          maxSize: _config.maxConnectionPoolSize,
+          connectionTimeout: _config.connectionTimeout,
+          customCACertificatePath: _config.customCACertificatePath,
+          certificateValidator: _config.certificateValidator,
+        ),
+      );
 
   @override
   ParsedUri get uri => _uri;
@@ -147,7 +147,7 @@ class _Neo4jDriverImpl implements Neo4jDriver {
     if (_isClosed) {
       throw const ServiceUnavailableException('Driver has been closed');
     }
-    
+
     final sessionConfig = config ?? const SessionConfig();
     return SessionImpl(_connectionPool, sessionConfig);
   }
@@ -157,7 +157,7 @@ class _Neo4jDriverImpl implements Neo4jDriver {
     if (_isClosed) {
       throw const ServiceUnavailableException('Driver has been closed');
     }
-    
+
     // Attempt to acquire and immediately release a connection
     try {
       final connection = await _connectionPool.acquire();
@@ -179,9 +179,9 @@ class _Neo4jDriverImpl implements Neo4jDriver {
     if (_isClosed) {
       return;
     }
-    
+
     _isClosed = true;
-    
+
     // Close connection pool
     await _connectionPool.close();
   }

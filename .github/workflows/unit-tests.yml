@@ -2,57 +2,46 @@ name: Unit Tests
 
 on:
   push:
+    branches: [main]
   pull_request:
-    branches: [ main ]
 
 jobs:
   unit-tests:
     name: Test dart_packstream and dart_bolt
-    runs-on: ${{ matrix.os }}
-    
+    runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        dart-version: ['3.8.0']
-    
+        dart-version: ["3.8.0"]
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup Dart
-      uses: dart-lang/setup-dart@v1
-      with:
-        sdk: ${{ matrix.dart-version }}
-    
-    - name: Cache pub dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pub-cache
-          **/.dart_tool
-          **/pubspec.lock
-        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pub-
-    
-    - name: Install dpk
-      run: dart pub global activate dpk
-    
-    - name: Get dependencies
-      run: dpk get
-    
-    - name: Test dart_packstream
-      run: dpk run test:packstream
-    
-    - name: Test dart_bolt
-      run: dpk run test:bolt
-    
-    - name: Upload test results
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: unit-test-results-${{ matrix.os }}
-        path: |
-          packages/dart_packstream/test/
-          packages/dart_bolt/test/
-        retention-days: 7
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.dart-version }}
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/.dart_tool
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-${{ hashFiles('packages/*/pubspec.yaml', 'pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dpk
+        run: dart pub global activate dpk
+
+      - name: Get dependencies
+        run: dpk get
+
+      - name: Test dart_packstream
+        run: dpk run test:packstream
+
+      - name: Test dart_bolt
+        run: dpk run test:bolt

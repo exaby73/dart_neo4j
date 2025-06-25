@@ -2,7 +2,7 @@ import 'package:dart_bolt/dart_bolt.dart' as bolt;
 import 'package:dart_neo4j/src/exceptions/neo4j_exception.dart';
 
 /// Exception thrown when connection-related errors occur in the Neo4j driver.
-/// 
+///
 /// This wraps the low-level Bolt connection exceptions to provide a higher-level
 /// driver-specific interface while preserving the underlying cause.
 class ConnectionException extends Neo4jException {
@@ -10,7 +10,9 @@ class ConnectionException extends Neo4jException {
   const ConnectionException(super.message, [super.cause]);
 
   /// Creates a connection exception from a Bolt connection exception.
-  factory ConnectionException.fromBolt(bolt.BoltConnectionException boltException) {
+  factory ConnectionException.fromBolt(
+    bolt.BoltConnectionException boltException,
+  ) {
     return ConnectionException(boltException.message, boltException);
   }
 
@@ -29,7 +31,9 @@ class ServiceUnavailableException extends ConnectionException {
   const ServiceUnavailableException(super.message, [super.cause]);
 
   /// Creates a service unavailable exception from a Bolt exception.
-  factory ServiceUnavailableException.fromBolt(bolt.ServiceUnavailableException boltException) {
+  factory ServiceUnavailableException.fromBolt(
+    bolt.ServiceUnavailableException boltException,
+  ) {
     return ServiceUnavailableException(boltException.message, boltException);
   }
 
@@ -51,8 +55,14 @@ class ConnectionTimeoutException extends ConnectionException {
   const ConnectionTimeoutException(super.message, [this.timeout, super.cause]);
 
   /// Creates a timeout exception from a Bolt exception.
-  factory ConnectionTimeoutException.fromBolt(bolt.ConnectionTimeoutException boltException) {
-    return ConnectionTimeoutException(boltException.message, boltException.timeout, boltException);
+  factory ConnectionTimeoutException.fromBolt(
+    bolt.ConnectionTimeoutException boltException,
+  ) {
+    return ConnectionTimeoutException(
+      boltException.message,
+      boltException.timeout,
+      boltException,
+    );
   }
 
   @override
@@ -74,7 +84,9 @@ class ConnectionLostException extends ConnectionException {
   const ConnectionLostException(super.message, [super.cause]);
 
   /// Creates a connection lost exception from a Bolt exception.
-  factory ConnectionLostException.fromBolt(bolt.ConnectionLostException boltException) {
+  factory ConnectionLostException.fromBolt(
+    bolt.ConnectionLostException boltException,
+  ) {
     return ConnectionLostException(boltException.message, boltException);
   }
 
@@ -116,7 +128,11 @@ class ProtocolException extends ConnectionException {
 
   /// Creates a protocol exception from a Bolt exception.
   factory ProtocolException.fromBolt(bolt.ProtocolException boltException) {
-    return ProtocolException(boltException.message, boltException.version, boltException);
+    return ProtocolException(
+      boltException.message,
+      boltException.version,
+      boltException,
+    );
   }
 
   @override

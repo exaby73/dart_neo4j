@@ -77,9 +77,7 @@ class BoltMessageFactory {
     String? credentials,
     String? realm,
   }) {
-    final auth = <PsString, PsDataType>{
-      PsString('scheme'): PsString(scheme),
-    };
+    final auth = <PsString, PsDataType>{PsString('scheme'): PsString(scheme)};
 
     if (principal != null) {
       auth[PsString('principal')] = PsString(principal);

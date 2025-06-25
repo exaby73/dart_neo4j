@@ -122,8 +122,6 @@ services:
       - ./ssl-certs:/var/lib/neo4j/certificates/bolt
     networks:
       - neo4j-network
-    depends_on:
-      - ssl-cert-generator
 
   # Self-signed SSL Neo4j instance for bolt+ssc:// testing
   neo4j-self-signed:
@@ -152,29 +150,7 @@ services:
       - ./ssl-certs:/var/lib/neo4j/certificates/bolt
     networks:
       - neo4j-network
-    depends_on:
-      - ssl-cert-generator
 
-  # SSL Certificate Generator Service
-  ssl-cert-generator:
-    image: alpine:latest
-    container_name: ssl-cert-generator
-    volumes:
-      - ./ssl-certs:/ssl-certs
-      - ./scripts:/scripts:ro
-    command: >
-      sh -c "
-        apk add --no-cache openssl bash &&
-        if [ ! -f /ssl-certs/server-cert.pem ]; then
-          echo 'Generating SSL certificates...' &&
-          cd /scripts &&
-          ./generate-ssl-certs.sh
-        else
-          echo 'SSL certificates already exist, skipping generation.'
-        fi
-      "
-    networks:
-      - neo4j-network
 
 volumes:
   neo4j-single-data:

@@ -21,9 +21,7 @@ class BasicAuth extends AuthToken {
 
   @override
   Map<String, Object> get properties {
-    final props = <String, Object>{
-      'credentials': _password,
-    };
+    final props = <String, Object>{'credentials': _password};
 
     if (_realm != null) {
       props['realm'] = _realm;
@@ -80,9 +78,7 @@ class BearerAuth extends AuthToken {
 
   @override
   Map<String, Object> get properties {
-    final props = <String, Object>{
-      'credentials': _token,
-    };
+    final props = <String, Object>{'credentials': _token};
 
     if (_realm != null) {
       props['realm'] = _realm;
@@ -105,9 +101,7 @@ class BearerAuth extends AuthToken {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is BearerAuth &&
-        other.token == token &&
-        other.realm == realm;
+    return other is BearerAuth && other.token == token && other.realm == realm;
   }
 
   @override
@@ -137,9 +131,7 @@ class KerberosAuth extends AuthToken {
 
   @override
   Map<String, Object> get properties {
-    final props = <String, Object>{
-      'credentials': _ticket,
-    };
+    final props = <String, Object>{'credentials': _ticket};
 
     if (_realm != null) {
       props['realm'] = _realm;

@@ -10,7 +10,7 @@ import 'package:dart_bolt/src/messages/bolt_message.dart';
 class BoltProtocol {
   static const int _magicPreamble = 0x6060B017;
   static const int _maxChunkSize = 0xFFFF;
-  
+
   /// Supported protocol versions in descending order of preference.
   static const List<int> _supportedVersions = [
     0x00000508, // Version 5.8
@@ -21,7 +21,7 @@ class BoltProtocol {
 
   final BoltSocket _socket;
   int? _agreedVersion;
-  
+
   // For chunk parsing
   ByteData? _partialData;
   final List<int> _currentMessageData = [];
@@ -33,7 +33,7 @@ class BoltProtocol {
   int? get agreedVersion => _agreedVersion;
 
   /// Performs the Bolt protocol handshake.
-  /// 
+  ///
   /// Returns the agreed protocol version.
   /// Throws [ProtocolException] if version negotiation fails.
   /// Throws [ConnectionTimeoutException] if handshake times out.
@@ -41,12 +41,12 @@ class BoltProtocol {
     // Create handshake message
     final handshake = ByteData(20);
     handshake.setUint32(0, _magicPreamble, Endian.big);
-    
+
     // Add supported versions
     for (int i = 0; i < 4 && i < _supportedVersions.length; i++) {
       handshake.setUint32(4 + (i * 4), _supportedVersions[i], Endian.big);
     }
-    
+
     // Fill remaining slots with zeros if needed
     for (int i = _supportedVersions.length; i < 4; i++) {
       handshake.setUint32(4 + (i * 4), 0, Endian.big);
@@ -58,7 +58,7 @@ class BoltProtocol {
     // Wait for version negotiation response
     final versionCompleter = Completer<int>();
     late StreamSubscription<Uint8List> handshakeSubscription;
-    
+
     handshakeSubscription = _socket.dataStream.listen((data) {
       if (data.length >= 4) {
         final version = ByteData.view(data.buffer).getUint32(0, Endian.big);
@@ -69,10 +69,12 @@ class BoltProtocol {
 
     _agreedVersion = await versionCompleter.future.timeout(
       const Duration(seconds: 10),
-      onTimeout: () => throw ConnectionTimeoutException(
-        'Handshake timeout: server did not respond to version negotiation',
-        const Duration(seconds: 10),
-      ),
+      onTimeout:
+          () =>
+              throw ConnectionTimeoutException(
+                'Handshake timeout: server did not respond to version negotiation',
+                const Duration(seconds: 10),
+              ),
     );
 
     if (_agreedVersion == 0) {
@@ -81,7 +83,7 @@ class BoltProtocol {
         _agreedVersion,
       );
     }
-    
+
     if (!_supportedVersions.contains(_agreedVersion)) {
       throw ProtocolException(
         'Server negotiated an unexpected protocol version',
@@ -106,26 +108,29 @@ class BoltProtocol {
   /// The message is terminated with a zero-length chunk (0x00 0x00).
   static Uint8List chunkMessage(Uint8List messageData) {
     final chunks = <Uint8List>[];
-    
+
     int offset = 0;
     while (offset < messageData.length) {
-      final int chunkSize = (messageData.length - offset).clamp(0, _maxChunkSize);
+      final int chunkSize = (messageData.length - offset).clamp(
+        0,
+        _maxChunkSize,
+      );
       final chunk = Uint8List(2 + chunkSize);
-      
+
       // Write chunk size (big-endian uint16)
       chunk[0] = (chunkSize >> 8) & 0xFF;
       chunk[1] = chunkSize & 0xFF;
-      
+
       // Write chunk data
       chunk.setRange(2, 2 + chunkSize, messageData, offset);
       chunks.add(chunk);
-      
+
       offset += chunkSize;
     }
-    
+
     // Add terminating chunk (size 0)
     chunks.add(Uint8List.fromList([0x00, 0x00]));
-    
+
     // Combine all chunks
     final totalLength = chunks.fold<int>(0, (sum, chunk) => sum + chunk.length);
     final result = Uint8List(totalLength);
@@ -134,21 +139,25 @@ class BoltProtocol {
       result.setRange(resultOffset, resultOffset + chunk.length, chunk);
       resultOffset += chunk.length;
     }
-    
+
     return result;
   }
 
   /// Processes incoming data and extracts complete messages.
-  /// 
+  ///
   /// Returns a list of parsed Bolt messages.
   /// Handles partial data across multiple calls.
   List<BoltMessage> parseData(Uint8List data) {
     final messages = <BoltMessage>[];
-    
+
     // Combine with any partial data from previous reads
     if (_partialData != null) {
       final combined = Uint8List(_partialData!.lengthInBytes + data.length);
-      combined.setRange(0, _partialData!.lengthInBytes, _partialData!.buffer.asUint8List());
+      combined.setRange(
+        0,
+        _partialData!.lengthInBytes,
+        _partialData!.buffer.asUint8List(),
+      );
       combined.setRange(_partialData!.lengthInBytes, combined.length, data);
       _partialData = ByteData.view(combined.buffer);
     } else {
@@ -166,9 +175,11 @@ class BoltProtocol {
         // End of message - parse the accumulated chunk data
         if (_currentMessageData.isNotEmpty) {
           try {
-            final messageData = ByteData.view(Uint8List.fromList(_currentMessageData).buffer);
+            final messageData = ByteData.view(
+              Uint8List.fromList(_currentMessageData).buffer,
+            );
             final message = PsDataType.fromPackStreamBytes(messageData);
-            
+
             if (message is BoltMessage) {
               messages.add(message);
             }

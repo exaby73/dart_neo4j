@@ -7,7 +7,7 @@ void main() {
     group('valid URIs', () {
       test('should parse bolt:// URI', () {
         final uri = UriParser.parse('bolt://localhost:7687');
-        
+
         expect(uri.connectionType, equals(ConnectionType.direct));
         expect(uri.host, equals('localhost'));
         expect(uri.port, equals(7687));
@@ -17,7 +17,7 @@ void main() {
 
       test('should parse bolt:// URI with database', () {
         final uri = UriParser.parse('bolt://localhost:7687/mydb');
-        
+
         expect(uri.connectionType, equals(ConnectionType.direct));
         expect(uri.host, equals('localhost'));
         expect(uri.port, equals(7687));
@@ -26,14 +26,14 @@ void main() {
 
       test('should parse bolt+s:// URI (encrypted)', () {
         final uri = UriParser.parse('bolt+s://localhost:7687');
-        
+
         expect(uri.connectionType, equals(ConnectionType.direct));
         expect(uri.encrypted, isTrue);
       });
 
       test('should parse bolt+ssc:// URI (self-signed certificates)', () {
         final uri = UriParser.parse('bolt+ssc://localhost:7687');
-        
+
         expect(uri.connectionType, equals(ConnectionType.direct));
         expect(uri.encrypted, isTrue);
         expect(uri.allowsSelfSignedCertificates, isTrue);
@@ -41,7 +41,7 @@ void main() {
 
       test('should parse neo4j:// URI', () {
         final uri = UriParser.parse('neo4j://localhost:7687');
-        
+
         expect(uri.connectionType, equals(ConnectionType.routing));
         expect(uri.host, equals('localhost'));
         expect(uri.port, equals(7687));
@@ -50,14 +50,14 @@ void main() {
 
       test('should parse neo4j+s:// URI (encrypted)', () {
         final uri = UriParser.parse('neo4j+s://localhost:7687');
-        
+
         expect(uri.connectionType, equals(ConnectionType.routing));
         expect(uri.encrypted, isTrue);
       });
 
       test('should parse neo4j+ssc:// URI (self-signed certificates)', () {
         final uri = UriParser.parse('neo4j+ssc://localhost:7687');
-        
+
         expect(uri.connectionType, equals(ConnectionType.routing));
         expect(uri.encrypted, isTrue);
         expect(uri.allowsSelfSignedCertificates, isTrue);
@@ -65,20 +65,22 @@ void main() {
 
       test('should use default port 7687 when not specified', () {
         final uri = UriParser.parse('bolt://localhost');
-        
+
         expect(uri.port, equals(7687));
       });
 
       test('should parse URI with IPv6 address', () {
         final uri = UriParser.parse('bolt://[::1]:7687');
-        
+
         expect(uri.host, equals('::1'));
         expect(uri.port, equals(7687));
       });
 
       test('should parse URI with query parameters', () {
-        final uri = UriParser.parse('bolt://localhost:7687?routing=false&policy=round_robin');
-        
+        final uri = UriParser.parse(
+          'bolt://localhost:7687?routing=false&policy=round_robin',
+        );
+
         expect(uri.parameters['routing'], equals('false'));
         expect(uri.parameters['policy'], equals('round_robin'));
       });
@@ -120,18 +122,18 @@ void main() {
         );
       });
 
-      test('should throw InvalidUriException for database name starting with number', () {
-        expect(
-          () => UriParser.parse('bolt://localhost:7687/123db'),
-          throwsA(isA<InvalidUriException>()),
-        );
-      });
+      test(
+        'should throw InvalidUriException for database name starting with number',
+        () {
+          expect(
+            () => UriParser.parse('bolt://localhost:7687/123db'),
+            throwsA(isA<InvalidUriException>()),
+          );
+        },
+      );
 
       test('should throw InvalidUriException for empty URI', () {
-        expect(
-          () => UriParser.parse(''),
-          throwsA(isA<InvalidUriException>()),
-        );
+        expect(() => UriParser.parse(''), throwsA(isA<InvalidUriException>()));
       });
 
       test('should throw InvalidUriException for malformed URI', () {
@@ -147,7 +149,7 @@ void main() {
         final validNames = [
           'mydb',
           'my_db',
-          'my.db', 
+          'my.db',
           'my-db',
           'database123',
           'db_with_underscores',
@@ -166,14 +168,14 @@ void main() {
 
       test('should reject invalid database names', () {
         final invalidNames = [
-          '123db',          // starts with number
-          'my db',          // contains space
-          'my@db',          // contains special character
-          'a' * 64,         // too long
-          'my-',            // ends with hyphen
-          'my.',            // ends with dot
-          'my..db',         // consecutive dots
-          'ab',             // too short
+          '123db', // starts with number
+          'my db', // contains space
+          'my@db', // contains special character
+          'a' * 64, // too long
+          'my-', // ends with hyphen
+          'my.', // ends with dot
+          'my..db', // consecutive dots
+          'ab', // too short
         ];
 
         for (final name in invalidNames) {

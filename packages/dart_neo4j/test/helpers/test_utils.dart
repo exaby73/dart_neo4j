@@ -6,25 +6,29 @@ import 'package:test/test.dart';
 /// Utility functions for testing
 class TestUtils {
   static final _random = Random();
-  
+
   /// Generates a random string of given length
   static String randomString(int length) {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     return String.fromCharCodes(
-      Iterable.generate(length, (_) => chars.codeUnitAt(_random.nextInt(chars.length))),
+      Iterable.generate(
+        length,
+        (_) => chars.codeUnitAt(_random.nextInt(chars.length)),
+      ),
     );
   }
-  
+
   /// Generates a random integer within a range
   static int randomInt(int min, int max) {
     return min + _random.nextInt(max - min + 1);
   }
-  
+
   /// Generates a random double within a range
   static double randomDouble(double min, double max) {
     return min + _random.nextDouble() * (max - min);
   }
-  
+
   /// Generates random test data map
   static Map<String, dynamic> randomTestData() {
     return {
@@ -39,7 +43,7 @@ class TestUtils {
       },
     };
   }
-  
+
   /// Waits for a condition to be true with timeout
   static Future<void> waitFor(
     bool Function() condition,
@@ -48,17 +52,17 @@ class TestUtils {
     Duration interval = const Duration(milliseconds: 100),
   }) async {
     final deadline = DateTime.now().add(timeout);
-    
+
     while (DateTime.now().isBefore(deadline)) {
       if (condition()) {
         return;
       }
       await Future.delayed(interval);
     }
-    
+
     throw TimeoutException(message, timeout);
   }
-  
+
   /// Measures execution time of a function
   static Future<Duration> measureTime(Future<void> Function() fn) async {
     final stopwatch = Stopwatch()..start();
@@ -66,27 +70,27 @@ class TestUtils {
     stopwatch.stop();
     return stopwatch.elapsed;
   }
-  
+
   /// Runs a function multiple times and returns statistics
   static Future<PerformanceStats> measurePerformance(
     Future<void> Function() fn,
     int iterations,
   ) async {
     final times = <Duration>[];
-    
+
     for (int i = 0; i < iterations; i++) {
       final time = await measureTime(fn);
       times.add(time);
     }
-    
+
     times.sort((a, b) => a.compareTo(b));
-    
+
     final total = times.fold(Duration.zero, (sum, time) => sum + time);
     final average = Duration(microseconds: total.inMicroseconds ~/ iterations);
     final median = times[iterations ~/ 2];
     final min = times.first;
     final max = times.last;
-    
+
     return PerformanceStats(
       iterations: iterations,
       total: total,
@@ -96,7 +100,7 @@ class TestUtils {
       max: max,
     );
   }
-  
+
   /// Retries a function until it succeeds or max attempts reached
   static Future<T> retry<T>(
     Future<T> Function() fn, {
@@ -104,7 +108,7 @@ class TestUtils {
     Duration delay = const Duration(seconds: 1),
   }) async {
     Exception? lastException;
-    
+
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await fn();
@@ -115,10 +119,10 @@ class TestUtils {
         }
       }
     }
-    
+
     throw lastException!;
   }
-  
+
   /// Creates a stress test that runs multiple concurrent operations
   static Future<void> stressTest(
     Future<void> Function() operation,
@@ -127,14 +131,14 @@ class TestUtils {
   ) async {
     final futures = <Future<void>>[];
     final deadline = DateTime.now().add(duration);
-    
+
     for (int i = 0; i < concurrency; i++) {
       futures.add(_runUntilDeadline(operation, deadline));
     }
-    
+
     await Future.wait(futures);
   }
-  
+
   static Future<void> _runUntilDeadline(
     Future<void> Function() operation,
     DateTime deadline,
@@ -145,7 +149,7 @@ class TestUtils {
       await Future.delayed(const Duration(milliseconds: 1));
     }
   }
-  
+
   /// Validates that a function throws a specific exception
   static Future<void> expectThrows<T extends Exception>(
     Future<void> Function() fn,
@@ -161,7 +165,7 @@ class TestUtils {
       // Expected exception was thrown
     }
   }
-  
+
   /// Creates a memory pressure test by allocating large amounts of data
   static Future<void> memoryPressureTest(
     Future<void> Function() operation, {
@@ -172,7 +176,7 @@ class TestUtils {
     for (int i = 0; i < pressureMB; i++) {
       pressure.add(List.filled(1024 * 1024, i)); // 1MB chunks
     }
-    
+
     try {
       await operation();
     } finally {
@@ -189,7 +193,7 @@ class PerformanceStats {
   final Duration median;
   final Duration min;
   final Duration max;
-  
+
   const PerformanceStats({
     required this.iterations,
     required this.total,
@@ -198,12 +202,12 @@ class PerformanceStats {
     required this.min,
     required this.max,
   });
-  
+
   /// Calculates operations per second
   double get operationsPerSecond {
     return iterations / (total.inMicroseconds / Duration.microsecondsPerSecond);
   }
-  
+
   @override
   String toString() {
     return 'PerformanceStats{'
