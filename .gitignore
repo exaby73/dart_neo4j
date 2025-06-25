@@ -1,3 +1,5 @@
 .dart_tool
 pubspec.lock
 ssl-certs
+.asdf
+.tool-versions
