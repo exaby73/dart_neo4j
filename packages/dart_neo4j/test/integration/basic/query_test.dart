@@ -473,6 +473,72 @@ void main() {
       });
     });
 
+    group('Multiple Node Returns', () {
+      test('returns multiple nodes in single query', () async {
+        // Create test nodes
+        await session.run('''
+          CREATE (a:TestNode {id: 1, name: "Node A"}), 
+                 (b:TestNode {id: 2, name: "Node B"})
+        ''');
+
+        // Query returning multiple nodes
+        final result = await session.run('''
+          MATCH (a:TestNode {id: 1}), (b:TestNode {id: 2})
+          RETURN a, b
+        ''');
+
+        final records = await result.list();
+        expect(records, hasLength(1));
+
+        final record = records.first;
+
+        // Test accessing nodes using getNode method
+        final nodeA = record.getNode('a');
+        final nodeB = record.getNode('b');
+
+        expect(nodeA.properties['id'], equals(1));
+        expect(nodeA.properties['name'], equals('Node A'));
+        expect(nodeA.labels, contains('TestNode'));
+
+        expect(nodeB.properties['id'], equals(2));
+        expect(nodeB.properties['name'], equals('Node B'));
+        expect(nodeB.labels, contains('TestNode'));
+
+        // Clean up
+        await session.run('MATCH (n:TestNode) DETACH DELETE n');
+      });
+
+      test('returns nodes with relationships', () async {
+        // Create test nodes with relationship
+        await session.run('''
+          CREATE (a:TestNode {id: 1, name: "Node A"})-[r:CONNECTS {weight: 5}]->(b:TestNode {id: 2, name: "Node B"})
+        ''');
+
+        // Query returning nodes and relationship
+        final result = await session.run('''
+          MATCH (a:TestNode {id: 1})-[r:CONNECTS]->(b:TestNode {id: 2})
+          RETURN a, r, b
+        ''');
+
+        final records = await result.list();
+        expect(records, hasLength(1));
+
+        final record = records.first;
+
+        final nodeA = record.getNode('a');
+        final rel = record.getRelationship('r');
+        final nodeB = record.getNode('b');
+
+        expect(nodeA.properties['name'], equals('Node A'));
+        expect(nodeB.properties['name'], equals('Node B'));
+        expect(rel.type, equals('CONNECTS'));
+        expect(rel.properties['weight'], equals(5));
+
+        // Clean up
+        await session.run('MATCH (n:TestNode) DETACH DELETE n');
+      });
+    });
+
     group('Data Types and Conversions', () {
       test('handles all basic Neo4j data types', () async {
         final result = await session.run('''

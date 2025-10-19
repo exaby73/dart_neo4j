@@ -45,6 +45,17 @@ class Record {
 
     // Handle PsDataType wrapped values
     if (value is PsDataType) {
+      // Check if it's a Bolt structure before converting to dartValue
+      if (value is BoltNode) {
+        return Node.fromBolt(value);
+      } else if (value is BoltRelationship) {
+        return Relationship.fromBolt(value);
+      } else if (value is BoltUnboundRelationship) {
+        return UnboundRelationship.fromBolt(value);
+      } else if (value is BoltPath) {
+        return Path.fromBolt(value);
+      }
+
       final dartValue = value.dartValue;
 
       // Convert Bolt-specific types to Neo4j types

@@ -454,7 +454,8 @@ class BoltConnection {
     if (message is BoltRecordMessage) {
       // RECORD messages are streaming data - add to current result if we're streaming
       if (_currentStreamingResult != null && _currentStreamingKeys != null) {
-        final recordData = message.data.dartValue as List<dynamic>;
+        // Use the raw PsList values instead of dartValue to preserve Bolt structures
+        final recordData = message.data.value;
         final record = Record.fromBolt(_currentStreamingKeys!, recordData);
         _currentStreamingResult!.addRecord(record);
       }
