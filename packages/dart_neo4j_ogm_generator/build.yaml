@@ -1,0 +1,13 @@
+targets:
+  $default:
+    builders:
+      dart_neo4j_ogm_generator:cypher_generator:
+        enabled: true
+
+builders:
+  cypher_generator:
+    import: 'package:dart_neo4j_ogm_generator/builder.dart'
+    builder_factories: ['cypherGeneratorBuilder']
+    build_extensions: { '.dart': ['.cypher.dart'] }
+    auto_apply: dependents
+    build_to: source
