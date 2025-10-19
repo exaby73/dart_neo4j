@@ -6,4 +6,6 @@ environment:
 workspace:
   - packages/dart_bolt
   - packages/dart_neo4j
+  - packages/dart_neo4j_ogm
+  - packages/dart_neo4j_ogm_generator
   - packages/dart_packstream
