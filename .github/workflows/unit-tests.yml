@@ -7,12 +7,12 @@ on:
 
 jobs:
   unit-tests:
-    name: Test dart_packstream and dart_bolt
+    name: Test dart_packstream, dart_bolt, and dart_neo4j_ogm_generator
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        dart-version: ["3.8.0"]
+        dart-version: ['3.8.0']
 
     steps:
       - name: Checkout code
@@ -45,3 +45,11 @@ jobs:
 
       - name: Test dart_bolt
         run: dpk run test:bolt
+
+      - name: Test dart_neo4j_ogm_generator (unit tests only)
+        run: |
+          cd packages/dart_neo4j_ogm_generator
+          # Run only unit tests, skip integration tests that need Neo4j
+          dart test test/unit/ --reporter=expanded
+        env:
+          SKIP_NEO4J_TESTS: true

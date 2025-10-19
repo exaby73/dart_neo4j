@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        dart-version: ["3.8.0"]
+        dart-version: ['3.8.0']
 
     steps:
       - name: Checkout code
@@ -80,6 +80,9 @@ jobs:
           SKIP_SSL_TESTS=true SKIP_ROUTING_TESTS=true dart test test/integration/basic/ -j 1
         env:
           SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
+
+      - name: Test dart_neo4j_ogm_generator
+        run: dpk run test:ogm
 
       - name: Cleanup Neo4j containers
         if: always()

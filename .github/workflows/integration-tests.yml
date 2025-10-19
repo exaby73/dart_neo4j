@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        dart-version: ["3.8.0"]
+        dart-version: ['3.8.0']
 
     steps:
       - name: Checkout code
@@ -90,6 +90,9 @@ jobs:
         run: dpk run test:neo4j
         env:
           SSL_CERTS_PATH: ${{ github.workspace }}/ssl-certs
+
+      - name: Run dart_ogm_generator integration tests
+        run: dpk run test:ogm
 
       - name: Stop Neo4j containers
         if: always()
