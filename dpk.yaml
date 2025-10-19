@@ -31,6 +31,11 @@ scripts:
     runInPackages:
       - packages/dart_neo4j
 
+  test:ogm:
+    command: dart test
+    runInPackages:
+      - packages/dart_neo4j_ogm_generator
+
   test:all:
     command: |
       echo "Running Packstream tests"
@@ -41,3 +46,6 @@ scripts:
 
       echo "Running Neo4j tests"
       dpk run test:neo4j
+
+      echo "Running OGM tests"
+      dpk run test:ogm
