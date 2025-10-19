@@ -1,6 +1,6 @@
 name: dart_neo4j
 description: A comprehensive Neo4j driver for Dart supporting both bolt:// and neo4j:// URI schemes with type-safe result access.
-version: 0.0.2
+version: 0.1.0
 resolution: workspace
 repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_neo4j
 
@@ -8,7 +8,7 @@ environment:
   sdk: ^3.7.0
 
 dependencies:
-  dart_bolt: ^0.0.1
+  dart_bolt: ^0.1.0
 
 dev_dependencies:
   lints: ^5.0.0

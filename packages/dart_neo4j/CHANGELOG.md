@@ -1,3 +1,9 @@
+## 0.1.0
+
+- Fixed handling of multiple node returns in Cypher queries (RETURN a, b syntax)
+- Improved Record.fromBolt to properly handle BoltNode, BoltRelationship, and BoltUnboundRelationship structures
+- Enhanced BoltConnection to preserve Bolt structures in record data
+
 ## 0.0.2
 
 - Updated license section in README to correctly reflect GPL-3.0 license
