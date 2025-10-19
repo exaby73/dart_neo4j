@@ -27,6 +27,9 @@ class CypherGenerator extends GeneratorForAnnotation<CypherNode> {
       );
     }
 
+    // Validate that the class has a required CypherId id field
+    _validateIdField(element);
+
     // Extract class metadata
     final classInfo = _extractClassInfo(element, annotation);
 
@@ -55,43 +58,90 @@ class CypherGenerator extends GeneratorForAnnotation<CypherNode> {
   ) {
     final className = element.name3 ?? 'UnknownClass';
     final label = AnnotationReader.extractLabel(element, annotation);
-    final includeFromCypherMap = AnnotationReader.extractIncludeFromCypherMap(
-      annotation,
-    );
+    final includeFromNode = AnnotationReader.extractIncludeFromNode(annotation);
     final fields = _extractFieldInfo(element);
 
-    // Validate factory constructor if includeFromCypherMap is true
-    if (includeFromCypherMap) {
-      _validateFromCypherMapFactory(element, className);
+    // Validate factory constructor if includeFromNode is true
+    if (includeFromNode) {
+      _validateFromNodeFactory(element, className);
     }
 
     return ClassInfo(
       className: className,
       label: label,
       fields: fields,
-      includeFromCypherMap: includeFromCypherMap,
+      includeFromNode: includeFromNode,
     );
   }
 
-  /// Validates that the class has a fromCypherMap factory constructor.
-  void _validateFromCypherMapFactory(ClassElement2 element, String className) {
+  /// Validates that the class has a fromNode factory constructor.
+  void _validateFromNodeFactory(ClassElement2 element, String className) {
     final constructors = element.constructors2;
-    final hasFromCypherMapFactory = constructors.any(
-      (constructor) =>
-          constructor.isFactory && constructor.name3 == 'fromCypherMap',
+    final hasFromNodeFactory = constructors.any(
+      (constructor) => constructor.isFactory && constructor.name3 == 'fromNode',
     );
 
-    if (!hasFromCypherMapFactory) {
+    if (!hasFromNodeFactory) {
       final sampleCode = '''
-factory $className.fromCypherMap(Map<String, dynamic> map) => _\$${className}FromCypherMap(map);''';
+factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
 
       throw InvalidGenerationSourceError(
-        'Class $className is missing the required fromCypherMap factory constructor.\n'
+        'Class $className is missing the required fromNode factory constructor.\n'
         'Add this factory constructor to your class:\n\n'
         '$sampleCode\n\n'
-        'Or set includeFromCypherMap: false in the @CypherNode annotation if you don\'t need this functionality.',
+        'Or set includeFromNode: false in the @CypherNode annotation if you don\'t need this functionality.',
         element: element,
       );
+    }
+  }
+
+  /// Validates that the class has a required CypherId id field.
+  void _validateIdField(ClassElement2 element) {
+    final processableFields = AnnotationReader.getProcessableFields(element);
+
+    // Check if we have fields available (normal case or after Freezed has run)
+    if (processableFields.isNotEmpty) {
+      final idField =
+          processableFields.where((field) => field.name3 == 'id').firstOrNull;
+
+      if (idField == null) {
+        throw InvalidGenerationSourceError(
+          'Classes annotated with @cypherNode must have a CypherId id field',
+          element: element,
+        );
+      }
+
+      final idFieldType = idField.type.getDisplayString();
+      if (idFieldType != 'CypherId') {
+        throw InvalidGenerationSourceError(
+          'The id field must be of type CypherId, found: $idFieldType',
+          element: element,
+        );
+      }
+    } else {
+      // Fallback for Freezed classes - check constructor parameters
+      final constructorFieldInfo = AnnotationReader.getFieldInfoFromConstructor(
+        element,
+      );
+      final idFieldData =
+          constructorFieldInfo
+              .where((fieldData) => fieldData['name'] == 'id')
+              .firstOrNull;
+
+      if (idFieldData == null) {
+        throw InvalidGenerationSourceError(
+          'Classes annotated with @cypherNode must have a CypherId id field',
+          element: element,
+        );
+      }
+
+      final idFieldType = idFieldData['type'] as String;
+      if (idFieldType != 'CypherId') {
+        throw InvalidGenerationSourceError(
+          'The id field must be of type CypherId, found: $idFieldType',
+          element: element,
+        );
+      }
     }
   }
 
@@ -105,13 +155,16 @@ factory $className.fromCypherMap(Map<String, dynamic> map) => _\$${className}Fro
         final fieldName = field.name3 ?? 'unknownField';
         final fieldType = field.type.getDisplayString();
         final cypherName = AnnotationReader.getCypherPropertyName(field);
-        final isIgnored = AnnotationReader.isFieldIgnored(field);
+        final isIdField = fieldName == 'id';
+        // Id fields are always ignored for Cypher properties, regardless of @CypherProperty annotation
+        final isIgnored = isIdField || AnnotationReader.isFieldIgnored(field);
 
         return FieldInfo(
           name: fieldName,
           type: fieldType,
           cypherName: cypherName,
           isIgnored: isIgnored,
+          isIdField: isIdField,
         );
       }).toList();
     }
@@ -123,11 +176,17 @@ factory $className.fromCypherMap(Map<String, dynamic> map) => _\$${className}Fro
     );
 
     return constructorFieldInfo.map((fieldData) {
+      final fieldName = fieldData['name'] as String;
+      final isIdField = fieldName == 'id';
+      // Id fields are always ignored for Cypher properties, regardless of @CypherProperty annotation
+      final isIgnored = isIdField || (fieldData['isIgnored'] as bool);
+
       return FieldInfo(
-        name: fieldData['name'] as String,
+        name: fieldName,
         type: fieldData['type'] as String,
         cypherName: fieldData['cypherName'] as String,
-        isIgnored: fieldData['isIgnored'] as bool,
+        isIgnored: isIgnored,
+        isIdField: isIdField,
       );
     }).toList();
   }

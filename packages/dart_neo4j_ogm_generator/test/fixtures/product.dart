@@ -2,9 +2,9 @@ import 'package:dart_neo4j_ogm/dart_neo4j_ogm.dart';
 
 part 'product.cypher.dart';
 
-@CypherNode(includeFromCypherMap: false)
+@CypherNode(includeFromNode: false)
 class Product {
-  final String id;
+  final CypherId id;
 
   @CypherProperty(name: 'productName')
   final String name;

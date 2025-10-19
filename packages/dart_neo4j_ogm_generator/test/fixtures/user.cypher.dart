@@ -11,14 +11,12 @@ part of 'user.dart';
 extension UserCypher on User {
   /// Returns a map of parameter names to values for Cypher queries.
   Map<String, dynamic> get cypherParameters {
-    return {'id': id, 'name': name, 'email': email};
+    return {'name': name, 'email': email};
   }
 
   /// Returns Cypher node properties syntax string with parameter placeholders.
   String get cypherProperties {
     final props = <String>[];
-
-    props.add('id: \$id');
 
     props.add('name: \$name');
 
@@ -27,13 +25,8 @@ extension UserCypher on User {
     return '{${props.join(', ')}}';
   }
 
-  /// Converts this User to a map for Cypher queries.
-  Map<String, dynamic> toCypherMap() {
-    return cypherParameters;
-  }
-
   /// Returns complete Cypher node syntax with variable name, label, and properties.
-  /// Example: user.toCypherWithPlaceholders('u') returns '(u:User {id: $id, name: $name})'
+  /// Example: `user.toCypherWithPlaceholders('u')` returns `'(u:User {id: $id, name: $name})'`
   String toCypherWithPlaceholders(String variableName) {
     return '($variableName:$nodeLabel $cypherProperties)';
   }
@@ -42,15 +35,13 @@ extension UserCypher on User {
   String get nodeLabel => 'User';
 
   /// Returns the list of property names used in Cypher queries.
-  List<String> get cypherPropertyNames => ['id', 'name', 'email'];
+  List<String> get cypherPropertyNames => ['name', 'email'];
 
   /// Returns Cypher node properties syntax string with prefixed parameter placeholders.
   /// This helps avoid parameter name collisions in complex queries.
-  /// Example: user.cypherPropertiesWithPrefix('user_') returns '{id: $user_id, name: $user_name}'
+  /// Example: `user.cypherPropertiesWithPrefix('user_')` returns `'{id: $user_id, name: $user_name}'`
   String cypherPropertiesWithPrefix(String prefix) {
     final props = <String>[];
-
-    props.add('id: \$${prefix}id');
 
     props.add('name: \$${prefix}name');
 
@@ -61,14 +52,14 @@ extension UserCypher on User {
 
   /// Returns a map of parameter names to values with the specified prefix.
   /// This helps avoid parameter name collisions in complex queries.
-  /// Example: user.cypherParametersWithPrefix('user_') returns {'user_id': '123', 'user_name': 'John'}
+  /// Example: `user.cypherParametersWithPrefix('user_')` returns `{'user_id': '123', 'user_name': 'John'}`
   Map<String, dynamic> cypherParametersWithPrefix(String prefix) {
-    return {'${prefix}id': id, '${prefix}name': name, '${prefix}email': email};
+    return {'${prefix}name': name, '${prefix}email': email};
   }
 
   /// Returns complete Cypher node syntax with variable name, label, and prefixed properties.
   /// This helps avoid parameter name collisions in complex queries.
-  /// Example: user.toCypherWithPlaceholdersWithPrefix('u', 'user_') returns '(u:User {id: $user_id, name: $user_name})'
+  /// Example: `user.toCypherWithPlaceholdersWithPrefix('u', 'user_')` returns `'(u:User {id: $user_id, name: $user_name})'`
   String toCypherWithPlaceholdersWithPrefix(
     String variableName,
     String prefix,
@@ -77,15 +68,17 @@ extension UserCypher on User {
   }
 }
 
-/// Private function to create User from Cypher result map.
+/// Private function to create User from Neo4j Node object.
 /// Use this in a factory constructor like:
-/// `factory User.fromCypherMap(Map<String, dynamic> map) => _$UserFromCypherMap(map);`
-User _$UserFromCypherMap(Map<String, dynamic> map) {
+/// `factory User.fromNode(Node node) => _$UserFromNode(node);`
+User _$UserFromNode(Node node) {
+  final props = node.properties;
+
   return User(
-    id: map['id'] as String,
+    id: CypherId.value(node.id),
 
-    name: map['name'] as String,
+    name: props['name'] as String,
 
-    email: map['email'] as String,
+    email: props['email'] as String,
   );
 }

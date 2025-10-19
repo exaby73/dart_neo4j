@@ -13,10 +13,10 @@ class AnnotationReader {
     return labelValue ?? element.name3 ?? 'UnknownClass';
   }
 
-  /// Extracts the includeFromCypherMap flag from a @cypherNode annotation.
+  /// Extracts the includeFromNode flag from a @cypherNode annotation.
   /// Returns true by default if not specified.
-  static bool extractIncludeFromCypherMap(ConstantReader annotation) {
-    return annotation.peek('includeFromCypherMap')?.boolValue ?? true;
+  static bool extractIncludeFromNode(ConstantReader annotation) {
+    return annotation.peek('includeFromNode')?.boolValue ?? true;
   }
 
   /// Checks if a field element has a @CypherProperty annotation.

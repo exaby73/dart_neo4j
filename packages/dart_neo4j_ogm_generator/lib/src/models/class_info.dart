@@ -9,7 +9,7 @@ class ClassInfo {
     required this.className,
     required this.label,
     required this.fields,
-    this.includeFromCypherMap = true,
+    this.includeFromNode = true,
   });
 
   /// The name of the annotated class.
@@ -21,8 +21,8 @@ class ClassInfo {
   /// List of field information for the class.
   final List<FieldInfo> fields;
 
-  /// Whether to generate the fromCypherMap helper function.
-  final bool includeFromCypherMap;
+  /// Whether to generate the fromNode helper function.
+  final bool includeFromNode;
 
   /// Converts the class info to a map for template rendering.
   Map<String, dynamic> toMap() {
@@ -30,7 +30,7 @@ class ClassInfo {
       'className': className,
       'label': label,
       'fields': fields.map((field) => field.toMap()).toList(),
-      'includeFromCypherMap': includeFromCypherMap,
+      'includeFromNode': includeFromNode,
     };
   }
 }

@@ -5,13 +5,13 @@
 // CypherGenerator
 // **************************************************************************
 
-part of 'freezed_user.dart';
+part of 'json_user.dart';
 
-// Generated extension for FreezedUser
-extension FreezedUserCypher on FreezedUser {
+// Generated extension for JsonUser
+extension JsonUserCypher on JsonUser {
   /// Returns a map of parameter names to values for Cypher queries.
   Map<String, dynamic> get cypherParameters {
-    return {'name': name, 'emailAddress': email, 'bio': bio};
+    return {'name': name, 'email': email, 'userAge': age};
   }
 
   /// Returns Cypher node properties syntax string with parameter placeholders.
@@ -20,9 +20,9 @@ extension FreezedUserCypher on FreezedUser {
 
     props.add('name: \$name');
 
-    props.add('emailAddress: \$emailAddress');
+    props.add('email: \$email');
 
-    props.add('bio: \$bio');
+    props.add('userAge: \$userAge');
 
     return '{${props.join(', ')}}';
   }
@@ -33,11 +33,11 @@ extension FreezedUserCypher on FreezedUser {
     return '($variableName:$nodeLabel $cypherProperties)';
   }
 
-  /// Returns the Neo4j node label for this FreezedUser.
-  String get nodeLabel => 'FreezedUser';
+  /// Returns the Neo4j node label for this JsonUser.
+  String get nodeLabel => 'JsonUser';
 
   /// Returns the list of property names used in Cypher queries.
-  List<String> get cypherPropertyNames => ['name', 'emailAddress', 'bio'];
+  List<String> get cypherPropertyNames => ['name', 'email', 'userAge'];
 
   /// Returns Cypher node properties syntax string with prefixed parameter placeholders.
   /// This helps avoid parameter name collisions in complex queries.
@@ -47,9 +47,9 @@ extension FreezedUserCypher on FreezedUser {
 
     props.add('name: \$${prefix}name');
 
-    props.add('emailAddress: \$${prefix}emailAddress');
+    props.add('email: \$${prefix}email');
 
-    props.add('bio: \$${prefix}bio');
+    props.add('userAge: \$${prefix}userAge');
 
     return '{${props.join(', ')}}';
   }
@@ -61,9 +61,9 @@ extension FreezedUserCypher on FreezedUser {
     return {
       '${prefix}name': name,
 
-      '${prefix}emailAddress': email,
+      '${prefix}email': email,
 
-      '${prefix}bio': bio,
+      '${prefix}userAge': age,
     };
   }
 
@@ -76,4 +76,21 @@ extension FreezedUserCypher on FreezedUser {
   ) {
     return '($variableName:$nodeLabel ${cypherPropertiesWithPrefix(prefix)})';
   }
+}
+
+/// Private function to create JsonUser from Neo4j Node object.
+/// Use this in a factory constructor like:
+/// `factory JsonUser.fromNode(Node node) => _$JsonUserFromNode(node);`
+JsonUser _$JsonUserFromNode(Node node) {
+  final props = node.properties;
+
+  return JsonUser(
+    id: CypherId.value(node.id),
+
+    name: props['name'] as String,
+
+    email: props['email'] as String,
+
+    age: props['userAge'] as int?,
+  );
 }

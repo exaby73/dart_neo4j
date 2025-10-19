@@ -5,10 +5,10 @@ part 'freezed_user.freezed.dart';
 part 'freezed_user.cypher.dart';
 
 @freezed
-@CypherNode(includeFromCypherMap: false)
+@CypherNode(includeFromNode: false)
 abstract class FreezedUser with _$FreezedUser {
   const factory FreezedUser({
-    required String id,
+    required CypherId id,
     required String name,
     @CypherProperty(name: 'emailAddress') required String email,
     @CypherProperty(ignore: true) required String password,

@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$FreezedUser {
 
- String get id; String get name;@CypherProperty(name: 'emailAddress') String get email;@CypherProperty(ignore: true) String get password; String? get bio;
+ CypherId get id; String get name;@CypherProperty(name: 'emailAddress') String get email;@CypherProperty(ignore: true) String get password; String? get bio;
 /// Create a copy of FreezedUser
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,7 +45,7 @@ abstract mixin class $FreezedUserCopyWith<$Res>  {
   factory $FreezedUserCopyWith(FreezedUser value, $Res Function(FreezedUser) _then) = _$FreezedUserCopyWithImpl;
 @useResult
 $Res call({
- String id, String name,@CypherProperty(name: 'emailAddress') String email,@CypherProperty(ignore: true) String password, String? bio
+ CypherId id, String name,@CypherProperty(name: 'emailAddress') String email,@CypherProperty(ignore: true) String password, String? bio
 });
 
 
@@ -65,7 +65,7 @@ class _$FreezedUserCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? password = null,Object? bio = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as CypherId,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
 as String,bio: freezed == bio ? _self.bio : bio // ignore: cast_nullable_to_non_nullable
@@ -154,7 +154,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name, @CypherProperty(name: 'emailAddress')  String email, @CypherProperty(ignore: true)  String password,  String? bio)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CypherId id,  String name, @CypherProperty(name: 'emailAddress')  String email, @CypherProperty(ignore: true)  String password,  String? bio)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FreezedUser() when $default != null:
 return $default(_that.id,_that.name,_that.email,_that.password,_that.bio);case _:
@@ -175,7 +175,7 @@ return $default(_that.id,_that.name,_that.email,_that.password,_that.bio);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name, @CypherProperty(name: 'emailAddress')  String email, @CypherProperty(ignore: true)  String password,  String? bio)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CypherId id,  String name, @CypherProperty(name: 'emailAddress')  String email, @CypherProperty(ignore: true)  String password,  String? bio)  $default,) {final _that = this;
 switch (_that) {
 case _FreezedUser():
 return $default(_that.id,_that.name,_that.email,_that.password,_that.bio);case _:
@@ -195,7 +195,7 @@ return $default(_that.id,_that.name,_that.email,_that.password,_that.bio);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name, @CypherProperty(name: 'emailAddress')  String email, @CypherProperty(ignore: true)  String password,  String? bio)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CypherId id,  String name, @CypherProperty(name: 'emailAddress')  String email, @CypherProperty(ignore: true)  String password,  String? bio)?  $default,) {final _that = this;
 switch (_that) {
 case _FreezedUser() when $default != null:
 return $default(_that.id,_that.name,_that.email,_that.password,_that.bio);case _:
@@ -213,7 +213,7 @@ class _FreezedUser implements FreezedUser {
   const _FreezedUser({required this.id, required this.name, @CypherProperty(name: 'emailAddress') required this.email, @CypherProperty(ignore: true) required this.password, this.bio});
   
 
-@override final  String id;
+@override final  CypherId id;
 @override final  String name;
 @override@CypherProperty(name: 'emailAddress') final  String email;
 @override@CypherProperty(ignore: true) final  String password;
@@ -249,7 +249,7 @@ abstract mixin class _$FreezedUserCopyWith<$Res> implements $FreezedUserCopyWith
   factory _$FreezedUserCopyWith(_FreezedUser value, $Res Function(_FreezedUser) _then) = __$FreezedUserCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name,@CypherProperty(name: 'emailAddress') String email,@CypherProperty(ignore: true) String password, String? bio
+ CypherId id, String name,@CypherProperty(name: 'emailAddress') String email,@CypherProperty(ignore: true) String password, String? bio
 });
 
 
@@ -269,7 +269,7 @@ class __$FreezedUserCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? password = null,Object? bio = freezed,}) {
   return _then(_FreezedUser(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as CypherId,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
 as String,bio: freezed == bio ? _self.bio : bio // ignore: cast_nullable_to_non_nullable
