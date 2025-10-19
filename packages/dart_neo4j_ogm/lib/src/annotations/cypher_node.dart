@@ -4,17 +4,17 @@ class CypherNode {
   ///
   /// [label] is the optional Neo4j node label. If not provided,
   /// the class name will be used as the label.
-  /// [includeFromCypherMap] determines whether to generate the fromCypherMap helper function.
-  const CypherNode({this.label, this.includeFromCypherMap = true});
+  /// [includeFromNode] determines whether to generate the fromNode helper function.
+  const CypherNode({this.label, this.includeFromNode = true});
 
   /// The Neo4j node label to use in generated Cypher queries.
   /// If null, the class name will be used.
   final String? label;
 
-  /// Whether to generate the fromCypherMap helper function.
-  /// If true, the class must have a factory constructor named `fromCypherMap`.
-  /// If false, no fromCypherMap helper will be generated.
-  final bool includeFromCypherMap;
+  /// Whether to generate the fromNode helper function.
+  /// If true, the class must have a factory constructor named `fromNode`.
+  /// If false, no fromNode helper will be generated.
+  final bool includeFromNode;
 }
 
 /// Const instance of CypherNode annotation for convenience.
