@@ -1,3 +1,8 @@
+## 0.2.0
+
+- Updated Dart SDK requirement to ^3.8.0
+- Version bump for consistency with dart_neo4j ecosystem
+
 ## 0.1.0
 
 - Version bump for consistency with dart_neo4j ecosystem

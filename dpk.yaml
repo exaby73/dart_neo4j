@@ -3,7 +3,7 @@ catalog:
   repository: https://github.com/exaby73/dart_neo4j/tree/main/DPK_PACKAGE_PATH
 
   environment:
-    sdk: ^3.7.0
+    sdk: ^3.8.0
 
 scripts:
   analyze:

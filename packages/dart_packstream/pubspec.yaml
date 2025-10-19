@@ -1,11 +1,11 @@
 name: dart_packstream
 description: A Dart library for serializing and deserializing data using the Packstream format.
-version: 0.1.0
+version: 0.2.0
 resolution: workspace
 repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_packstream
 
 environment:
-  sdk: ^3.7.0
+  sdk: ^3.8.0
 
 dev_dependencies:
   lints: ^5.0.0

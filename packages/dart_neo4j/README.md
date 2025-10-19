@@ -19,7 +19,7 @@ Add `dart_neo4j` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_neo4j: ^1.0.0
+  dart_neo4j: <latest-version>
 ```
 
 Then run:
@@ -43,7 +43,7 @@ void main() async {
   try {
     // Verify connectivity
     await driver.verifyConnectivity();
-    
+
     // Create a session and run a query
     final session = driver.session();
     try {
@@ -217,7 +217,7 @@ final driver = Neo4jDriver.create(
   config: DriverConfig(
     certificateValidator: (cert) {
       // Accept certificates from localhost with specific issuer
-      return cert.subject.contains('localhost') && 
+      return cert.subject.contains('localhost') &&
              cert.issuer.contains('Development CA');
     },
   ),
@@ -278,9 +278,9 @@ final driver = Neo4jDriver.create(
    ```dart
    // Environment-based configuration
    final isProduction = Platform.environment['ENVIRONMENT'] == 'production';
-   
+
    final driver = Neo4jDriver.create(
-     isProduction 
+     isProduction
        ? 'bolt+s://prod-neo4j.company.com:7687'
        : 'bolt+ssc://localhost:7687',
      auth: BasicAuth(
@@ -288,7 +288,7 @@ final driver = Neo4jDriver.create(
        Platform.environment['NEO4J_PASSWORD'] ?? 'password',
      ),
      config: DriverConfig(
-       customCACertificatePath: isProduction 
+       customCACertificatePath: isProduction
          ? '/etc/ssl/certs/company-ca.pem'
          : null,
      ),
@@ -345,11 +345,11 @@ Future<void> testSSLConnection() async {
     'bolt+s://your-server:7687',
     auth: BasicAuth('username', 'password'),
   );
-  
+
   try {
     await driver.verifyConnectivity();
     print('SSL connection successful!');
-    
+
     final session = driver.session();
     try {
       final result = await session.run('RETURN "SSL Test" AS message');
@@ -452,13 +452,13 @@ final person = await session.executeWrite((tx) async {
     'CREATE (p:Person {name: \$name, email: \$email}) RETURN p',
     {'name': 'Jane Doe', 'email': 'jane@example.com'},
   );
-  
+
   final record = await createResult.single();
   final person = record.getNode('p');
-  
+
   // Update statistics
   await tx.run('MATCH (s:Stats) SET s.userCount = s.userCount + 1');
-  
+
   return person;
 });
 ```
@@ -470,7 +470,7 @@ final transaction = await session.beginTransaction();
 try {
   await transaction.run('CREATE (p:Person {name: "Test"})');
   await transaction.run('CREATE (c:Company {name: "Test Corp"})');
-  
+
   // Commit if everything succeeds
   await transaction.commit();
 } catch (e) {
@@ -621,7 +621,7 @@ if (person.hasProperty('email')) {
 
 ```dart
 final result = await session.run('''
-  MATCH (p:Person)-[r:WORKS_FOR]->(c:Company) 
+  MATCH (p:Person)-[r:WORKS_FOR]->(c:Company)
   RETURN r LIMIT 1
 ''');
 final record = await result.single();
@@ -666,7 +666,7 @@ if (startNode != null && endNode != null) {
 for (int i = 0; i < path.nodes.length; i++) {
   final node = path.nodes[i];
   print('Node \$i: \${node.getProperty<String>('name')}');
-  
+
   if (i < path.relationships.length) {
     final rel = path.relationships[i];
     print('  -> \${rel.type}');
@@ -807,7 +807,7 @@ class DatabaseService {
     'bolt://localhost:7687',
     auth: BasicAuth('neo4j', 'password'),
   );
-  
+
   static Neo4jDriver get driver => _driver;
 }
 
@@ -842,13 +842,13 @@ try {
   // Read first
   final result = await tx.run('MATCH (u:User {id: \$id}) RETURN u', {'id': 123});
   final user = (await result.single()).getNode('u');
-  
+
   // Then write based on read
   await tx.run(
     'CREATE (l:LoginEvent {userId: \$id, timestamp: datetime()})',
     {'id': user.id},
   );
-  
+
   await tx.commit();
 } catch (e) {
   await tx.rollback();
@@ -865,7 +865,7 @@ try {
    ```dart
    // Good
    await session.run('MATCH (u:User {name: \$name}) RETURN u', {'name': userName});
-   
+
    // Bad
    await session.run('MATCH (u:User {name: "\$userName"}) RETURN u');
    ```
@@ -906,9 +906,9 @@ try {
 ```dart
 class UserService {
   final Neo4jDriver _driver;
-  
+
   UserService(this._driver);
-  
+
   Future<Node> createUser(String name, String email) async {
     final session = _driver.session();
     try {
@@ -921,14 +921,14 @@ class UserService {
         })
         RETURN u
       ''', {'name': name, 'email': email});
-      
+
       final record = await result.single();
       return record.getNode('u');
     } finally {
       await session.close();
     }
   }
-  
+
   Future<Node?> findUserByEmail(String email) async {
     final session = _driver.session();
     try {
@@ -936,14 +936,14 @@ class UserService {
         'MATCH (u:User {email: \$email}) RETURN u',
         {'email': email},
       );
-      
+
       final record = await result.firstOrNull();
       return record?.getNodeOrNull('u');
     } finally {
       await session.close();
     }
   }
-  
+
   Future<List<Node>> getFriends(String userId) async {
     final session = _driver.session();
     try {
@@ -952,7 +952,7 @@ class UserService {
         RETURN friend
         ORDER BY friend.name
       ''', {'userId': userId});
-      
+
       final friends = <Node>[];
       await for (final record in result.records()) {
         friends.add(record.getNode('friend'));
@@ -970,9 +970,9 @@ class UserService {
 ```dart
 class RecommendationService {
   final Neo4jDriver _driver;
-  
+
   RecommendationService(this._driver);
-  
+
   Future<List<Node>> recommendProducts(String userId, {int limit = 10}) async {
     final session = _driver.session();
     try {
@@ -985,7 +985,7 @@ class RecommendationService {
           ORDER BY score DESC
           LIMIT \$limit
         ''', {'userId': userId, 'limit': limit});
-        
+
         final recommendations = <Node>[];
         await for (final record in result.records()) {
           recommendations.add(record.getNode('rec'));
