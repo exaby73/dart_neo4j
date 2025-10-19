@@ -49,3 +49,23 @@ scripts:
 
       echo "Running OGM tests"
       dpk run test:ogm
+
+  version:minor:
+    command: dart pub bump minor
+    runInPackages:
+      - packages/*
+
+  version:patch:
+    command: dart pub bump patch
+    runInPackages:
+      - packages/*
+
+  version:major:
+    command: dart pub bump major
+    runInPackages:
+      - packages/*
+
+  publish:all:
+    command: dart pub publish --force
+    runInPackages:
+      - packages/*
