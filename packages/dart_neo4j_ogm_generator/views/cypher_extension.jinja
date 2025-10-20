@@ -84,9 +84,12 @@ extension {{ className }}Cypher on {{ className }} {
   final props = node.properties;
 
   return {{ className }}(
-    id: CypherId.value(node.id),
     {% for field in fields %}
-    {% if not field['isIgnored'] and not field['isIdField'] %}
+    {% if field['isCypherIdField'] %}
+    {{ field['name'] }}: CypherId.value(node.id),
+    {% elif field['isCypherElementIdField'] %}
+    {{ field['name'] }}: CypherElementId.value(node.elementIdOrThrow),
+    {% elif not field['isIgnored'] %}
     {{ field['name'] }}: props['{{ field['cypherName'] }}'] as {{ field['type'] }},
     {% endif %}
     {% endfor %}

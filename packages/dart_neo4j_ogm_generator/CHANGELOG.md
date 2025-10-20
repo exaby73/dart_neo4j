@@ -1,3 +1,74 @@
+## 1.0.0
+
+### BREAKING CHANGES
+
+- **ID Field Validation**: Generator now accepts any field name for ID fields (not just `id`)
+  - Fields are identified by type (`CypherId` or `CypherElementId`) rather than name
+  - At least one ID field (either type) is required per `@cypherNode` class
+  - Only one occurrence of each ID type is allowed per class
+
+### New Features
+
+- **CypherElementId Support**: Full code generation support for `CypherElementId` type
+  - Generates `CypherElementId.value(node.elementIdOrThrow)` in `fromNode` factories
+  - Supports classes with only `CypherElementId` fields
+  - Supports classes with both `CypherId` and `CypherElementId` fields for gradual migration
+- **Flexible ID Field Naming**: ID fields can have any name (e.g., `elementId`, `nodeId`, `uid`)
+  - Generator identifies ID fields by type, not by field name
+  - Enables better semantic naming based on domain requirements
+- **Enhanced Validation**: Improved build-time error messages
+  - Clear errors if no ID field is present
+  - Clear errors if multiple fields of the same ID type exist
+  - Helpful suggestions for fixing validation errors
+
+### Improvements
+
+- **Code Quality**: Refactored `isIdField` to be a computed getter, eliminating desync risks
+- **Better Field Detection**: Enhanced field analysis for both regular and Freezed classes
+- **Comprehensive Tests**: Added test fixtures and tests for all ID type combinations
+  - Tests for `CypherId` only (backward compatibility)
+  - Tests for `CypherElementId` only (Neo4j 5.0+)
+  - Tests for both ID types (migration scenarios)
+
+### Technical Changes
+
+- Updated `FieldInfo` model with `isCypherIdField` and `isCypherElementIdField` properties
+- Updated `ClassInfo` model with `hasCypherId` and `hasCypherElementId` properties
+- Enhanced `_validateIdField()` to support both ID types with flexible naming
+- Updated Jinja template to conditionally generate appropriate ID field assignments
+- Refactored `isIdField` from stored field to computed getter for better consistency
+
+### Migration Guide
+
+Classes can now use `CypherElementId` for Neo4j 5.0+ compatibility:
+
+```dart
+// Neo4j 5.0+ style (recommended)
+@cypherNode
+class User {
+  final CypherElementId elementId;
+  final String name;
+
+  const User({required this.elementId, required this.name});
+  factory User.fromNode(Node node) => _$UserFromNode(node);
+}
+
+// Hybrid approach (for gradual migration)
+@cypherNode
+class User {
+  final CypherId legacyId;
+  final CypherElementId elementId;
+  final String name;
+
+  const User({
+    required this.legacyId,
+    required this.elementId,
+    required this.name,
+  });
+  factory User.fromNode(Node node) => _$UserFromNode(node);
+}
+```
+
 ## 0.2.0
 
 ### BREAKING CHANGES

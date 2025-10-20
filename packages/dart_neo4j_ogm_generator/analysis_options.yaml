@@ -14,6 +14,10 @@
 include: package:lints/recommended.yaml
 
 analyzer:
+  exclude:
+    - test/fixtures/*.cypher.dart
+    - test/fixtures/*.g.dart
+    - test/fixtures/*.freezed.dart
   errors:
     invalid_annotation_target: ignore
 # Uncomment the following section to specify additional rules.

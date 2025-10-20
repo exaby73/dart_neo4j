@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:dart_neo4j_ogm/dart_neo4j_ogm.dart';
 import 'package:dart_neo4j/dart_neo4j.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';

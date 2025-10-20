@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:dart_neo4j/dart_neo4j.dart';
 import 'package:dart_bolt/dart_bolt.dart';
 import 'package:dart_neo4j_ogm/dart_neo4j_ogm.dart';
@@ -8,6 +10,8 @@ import '../fixtures/person.dart';
 import '../fixtures/product.dart';
 import '../fixtures/freezed_user.dart';
 import '../fixtures/json_user.dart';
+import '../fixtures/modern_user.dart';
+import '../fixtures/hybrid_user.dart';
 
 void main() {
   group('Generated API Tests', () {
@@ -607,6 +611,150 @@ void main() {
           'email': 'test@example.com',
           'userAge': null,
         });
+      });
+    });
+
+    group('ModernUser class (with CypherElementId)', () {
+      test('CypherElementId JSON serialization works', () {
+        // Test CypherElementId.none() serialization
+        final noneId = CypherElementId.none();
+        expect(noneId.toJson(), isNull);
+        expect(CypherElementId.fromJson(null), equals(noneId));
+
+        // Test CypherElementId.value() serialization
+        final valueId = CypherElementId.value('4:abc123:42');
+        expect(valueId.toJson(), equals('4:abc123:42'));
+        expect(CypherElementId.fromJson('4:abc123:42'), equals(valueId));
+      });
+
+      test('cypherParameters returns correct map', () {
+        final user = ModernUser(
+          elementId: CypherElementId.value('4:abc123:1'),
+          name: 'Alice',
+          email: 'alice@example.com',
+        );
+
+        expect(user.cypherParameters, {
+          'name': 'Alice',
+          'email': 'alice@example.com',
+        });
+      });
+
+      test('cypherProperties returns correct Cypher syntax', () {
+        final user = ModernUser(
+          elementId: CypherElementId.value('4:abc123:1'),
+          name: 'Alice',
+          email: 'alice@example.com',
+        );
+
+        expect(user.cypherProperties, equals('{name: \$name, email: \$email}'));
+      });
+
+      test('fromNode creates correct instance with elementId', () {
+        final boltNode = BoltNode(
+          PsInt.compact(1),
+          PsList([PsString('ModernUser')]),
+          PsDictionary({
+            PsString('name'): PsString('Alice'),
+            PsString('email'): PsString('alice@example.com'),
+          }),
+          elementId: PsString('4:abc123:1'),
+        );
+        final node = Node.fromBolt(boltNode);
+
+        final user = ModernUser.fromNode(node);
+
+        expect(user.elementId.elementIdOrThrow, equals('4:abc123:1'));
+        expect(user.name, equals('Alice'));
+        expect(user.email, equals('alice@example.com'));
+      });
+
+      test('CypherElementId.none() behaves correctly', () {
+        final user = ModernUser(
+          elementId: CypherElementId.none(),
+          name: 'Bob',
+          email: 'bob@example.com',
+        );
+
+        expect(user.elementId.hasNoElementId, isTrue);
+        expect(user.elementId.hasElementId, isFalse);
+        expect(user.elementId.elementIdOrNull, isNull);
+        expect(
+          () => user.elementId.elementIdOrThrow,
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('CypherElementId.value() behaves correctly', () {
+        final user = ModernUser(
+          elementId: CypherElementId.value('4:abc123:99'),
+          name: 'Charlie',
+          email: 'charlie@example.com',
+        );
+
+        expect(user.elementId.hasElementId, isTrue);
+        expect(user.elementId.hasNoElementId, isFalse);
+        expect(user.elementId.elementIdOrNull, equals('4:abc123:99'));
+        expect(user.elementId.elementIdOrThrow, equals('4:abc123:99'));
+      });
+    });
+
+    group('HybridUser class (with both CypherId and CypherElementId)', () {
+      test('cypherParameters returns correct map', () {
+        final user = HybridUser(
+          legacyId: CypherId.value(42),
+          elementId: CypherElementId.value('4:abc123:42'),
+          username: 'hybrid_user',
+        );
+
+        expect(user.cypherParameters, {'username': 'hybrid_user'});
+      });
+
+      test('fromNode creates correct instance with both IDs', () {
+        final boltNode = BoltNode(
+          PsInt.compact(42),
+          PsList([PsString('HybridUser')]),
+          PsDictionary({PsString('username'): PsString('hybrid_user')}),
+          elementId: PsString('4:abc123:42'),
+        );
+        final node = Node.fromBolt(boltNode);
+
+        final user = HybridUser.fromNode(node);
+
+        expect(user.legacyId.idOrThrow, equals(42));
+        expect(user.elementId.elementIdOrThrow, equals('4:abc123:42'));
+        expect(user.username, equals('hybrid_user'));
+      });
+
+      test('both ID types work independently', () {
+        final user = HybridUser(
+          legacyId: CypherId.value(123),
+          elementId: CypherElementId.value('4:def456:123'),
+          username: 'test_hybrid',
+        );
+
+        // Test CypherId
+        expect(user.legacyId.hasId, isTrue);
+        expect(user.legacyId.idOrThrow, equals(123));
+        expect(user.legacyId.idOrNull, equals(123));
+
+        // Test CypherElementId
+        expect(user.elementId.hasElementId, isTrue);
+        expect(user.elementId.elementIdOrThrow, equals('4:def456:123'));
+        expect(user.elementId.elementIdOrNull, equals('4:def456:123'));
+      });
+
+      test('both ID types can be unset', () {
+        final user = HybridUser(
+          legacyId: CypherId.none(),
+          elementId: CypherElementId.none(),
+          username: 'new_hybrid',
+        );
+
+        expect(user.legacyId.hasNoId, isTrue);
+        expect(user.elementId.hasNoElementId, isTrue);
+        expect(user.legacyId.idOrNull, isNull);
+        expect(user.elementId.elementIdOrNull, isNull);
       });
     });
   });
