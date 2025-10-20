@@ -10,6 +10,8 @@ class ClassInfo {
     required this.label,
     required this.fields,
     this.includeFromNode = true,
+    this.hasCypherId = false,
+    this.hasCypherElementId = false,
   });
 
   /// The name of the annotated class.
@@ -24,6 +26,12 @@ class ClassInfo {
   /// Whether to generate the fromNode helper function.
   final bool includeFromNode;
 
+  /// Whether the class has a CypherId field.
+  final bool hasCypherId;
+
+  /// Whether the class has a CypherElementId field.
+  final bool hasCypherElementId;
+
   /// Converts the class info to a map for template rendering.
   Map<String, dynamic> toMap() {
     return {
@@ -31,6 +39,8 @@ class ClassInfo {
       'label': label,
       'fields': fields.map((field) => field.toMap()).toList(),
       'includeFromNode': includeFromNode,
+      'hasCypherId': hasCypherId,
+      'hasCypherElementId': hasCypherElementId,
     };
   }
 }

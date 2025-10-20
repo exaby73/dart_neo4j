@@ -70,11 +70,10 @@ void main() {
           expect(records.length, greaterThan(0));
 
           // Should have at least core members
-          final coreMembers =
-              records.where((record) {
-                final role = record['role'] as String?;
-                return role == 'LEADER' || role == 'FOLLOWER';
-              }).toList();
+          final coreMembers = records.where((record) {
+            final role = record['role'] as String?;
+            return role == 'LEADER' || role == 'FOLLOWER';
+          }).toList();
 
           expect(coreMembers.length, greaterThan(0));
         } catch (e) {
@@ -426,10 +425,9 @@ void main() {
             );
           });
 
-          lastBookmark =
-              writeSession.lastBookmarks.isNotEmpty
-                  ? writeSession.lastBookmarks.last
-                  : null;
+          lastBookmark = writeSession.lastBookmarks.isNotEmpty
+              ? writeSession.lastBookmarks.last
+              : null;
         } finally {
           await writeSession.close();
         }

@@ -69,12 +69,10 @@ class BoltProtocol {
 
     _agreedVersion = await versionCompleter.future.timeout(
       const Duration(seconds: 10),
-      onTimeout:
-          () =>
-              throw ConnectionTimeoutException(
-                'Handshake timeout: server did not respond to version negotiation',
-                const Duration(seconds: 10),
-              ),
+      onTimeout: () => throw ConnectionTimeoutException(
+        'Handshake timeout: server did not respond to version negotiation',
+        const Duration(seconds: 10),
+      ),
     );
 
     if (_agreedVersion == 0) {

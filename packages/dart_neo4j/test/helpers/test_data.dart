@@ -61,10 +61,9 @@ class TestData {
     // Create relationships in batches using separate queries
     const relBatchSize = 50;
     for (int i = 0; i < relationshipCount; i += relBatchSize) {
-      final endIndex =
-          (i + relBatchSize < relationshipCount)
-              ? i + relBatchSize
-              : relationshipCount;
+      final endIndex = (i + relBatchSize < relationshipCount)
+          ? i + relBatchSize
+          : relationshipCount;
 
       for (int j = i; j < endIndex; j++) {
         final from = j % nodeCount;

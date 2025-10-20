@@ -1,6 +1,6 @@
 name: dart_neo4j_ogm
 description: Annotations for Neo4j Object-Graph Mapping (OGM) code generation in Dart.
-version: 0.2.0
+version: 1.0.0
 resolution: workspace
 repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_neo4j_ogm
 

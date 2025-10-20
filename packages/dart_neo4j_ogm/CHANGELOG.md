@@ -1,3 +1,34 @@
+## 1.0.0
+
+### BREAKING CHANGES
+
+- **Deprecated `CypherId`**: The `CypherId` type is now deprecated in favor of `CypherElementId` for Neo4j 5.0+ compatibility
+  - Use `CypherElementId` for new code targeting Neo4j 5.0+
+  - Existing code using `CypherId` will continue to work but will emit deprecation warnings
+  - Both types can coexist in the same class during migration
+
+### New Features
+
+- **CypherElementId Type**: Added type-safe `CypherElementId` sealed class for Neo4j 5.0+ string-based element IDs
+  - `CypherElementId.none()` for new nodes without element IDs
+  - `CypherElementId.value(String)` for existing nodes with Neo4j-generated element IDs
+  - Built-in JSON serialization support with `cypherElementIdToJson` and `cypherElementIdFromJson` helpers
+  - Same API surface as `CypherId` for easy migration
+  - Supports nullable element IDs with `elementIdOrNull` and `hasNoElementId` properties
+- **Dual ID Support**: Classes can now have both `CypherId` and `CypherElementId` fields for gradual migration
+- **Enhanced Type Safety**: String-based element IDs provide better type checking and Neo4j 5.0+ compatibility
+
+### Improvements
+
+- **Smooth Migration Path**: Deprecation warnings guide users to migrate at their own pace
+- **Backward Compatibility**: Existing `CypherId` code continues to work without changes
+
+### Deprecations
+
+- `CypherId` class - Use `CypherElementId` instead
+- `cypherIdToJson()` helper - Use `cypherElementIdToJson()` instead
+- `cypherIdFromJson()` helper - Use `cypherElementIdFromJson()` instead
+
 ## 0.2.0
 
 ### BREAKING CHANGES

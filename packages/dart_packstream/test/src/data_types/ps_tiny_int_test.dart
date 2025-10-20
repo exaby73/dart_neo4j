@@ -109,10 +109,9 @@ void main() {
     });
 
     test('throws ArgumentError for ByteData with too many bytes', () {
-      final tooManyBytes =
-          ByteData(2)
-            ..setUint8(0, 0x00)
-            ..setUint8(1, 0x00);
+      final tooManyBytes = ByteData(2)
+        ..setUint8(0, 0x00)
+        ..setUint8(1, 0x00);
       expect(
         () => PsTinyInt.fromPackStreamBytes(tooManyBytes),
         throwsA(

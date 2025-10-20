@@ -167,10 +167,9 @@ sealed class PsDataType<T, D> {
           == 0xD9 ||
           == 0xDA => PsDictionary.fromPackStreamBytes(bytes),
           >= 0xB0 && <= 0xBF => _parseStructure(firstByte, bytes),
-          _ =>
-            throw ArgumentError(
-              'Invalid PackStream marker byte: 0x${firstByte.toRadixString(16)}',
-            ),
+          _ => throw ArgumentError(
+            'Invalid PackStream marker byte: 0x${firstByte.toRadixString(16)}',
+          ),
         }
         as PsDataType<T, D>;
   }

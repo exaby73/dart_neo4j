@@ -54,15 +54,14 @@ class AnnotationReader {
     final fields = element.fields2;
 
     // Remove synthetic and static fields
-    final processableFields =
-        fields
-            .where(
-              (field) =>
-                  !field.isSynthetic &&
-                  !field.isStatic &&
-                  !(field.name3?.startsWith('_') ?? false),
-            )
-            .toList();
+    final processableFields = fields
+        .where(
+          (field) =>
+              !field.isSynthetic &&
+              !field.isStatic &&
+              !(field.name3?.startsWith('_') ?? false),
+        )
+        .toList();
 
     // For Freezed classes, we might also need to check constructor parameters
     // if fields are not yet generated. This handles the case where the generator

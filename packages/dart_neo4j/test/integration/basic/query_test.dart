@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:dart_neo4j/dart_neo4j.dart';
 import 'package:test/test.dart';
 
@@ -817,6 +819,91 @@ void main() {
         final records = await result.list();
         expect(records.first['number_value'], equals('not_a_number'));
       });
+    });
+
+    group('Element ID Support (Neo4j 5.0+)', () {
+      test('Node elementId returns element ID when available', () async {
+        // Create a test node
+        await session.run('''
+          CREATE (n:ElementIdTest {name: "Test Node"})
+        ''');
+
+        // Query and return the node
+        final result = await session.run('''
+          MATCH (n:ElementIdTest {name: "Test Node"})
+          RETURN n
+        ''');
+
+        final records = await result.list();
+        expect(records, hasLength(1));
+
+        final node = records.first.getNode('n');
+
+        // elementId should be present (non-null) on Neo4j 5.0+
+        // or null on earlier versions
+        final elementId = node.elementId;
+        if (elementId != null) {
+          // If elementId is present, it should be a non-empty string
+          expect(elementId, isA<String>());
+          expect(elementId, isNotEmpty);
+
+          // elementIdOrThrow should return the same value
+          expect(node.elementIdOrThrow, equals(elementId));
+        } else {
+          // If elementId is null (pre-5.0), elementIdOrThrow should throw
+          expect(() => node.elementIdOrThrow, throwsA(isA<StateError>()));
+        }
+
+        // Node should always have a numeric ID
+        expect(node.id, isA<int>());
+
+        // Clean up
+        await session.run('MATCH (n:ElementIdTest) DELETE n');
+      });
+
+      test(
+        'Relationship elementId returns element ID when available',
+        () async {
+          // Create test nodes with a relationship
+          await session.run('''
+          CREATE (a:ElementIdTest {name: "Node A"})-[r:TEST_REL {prop: "value"}]->(b:ElementIdTest {name: "Node B"})
+        ''');
+
+          // Query and return the relationship
+          final result = await session.run('''
+          MATCH (a:ElementIdTest {name: "Node A"})-[r:TEST_REL]->(b:ElementIdTest {name: "Node B"})
+          RETURN r
+        ''');
+
+          final records = await result.list();
+          expect(records, hasLength(1));
+
+          final rel = records.first.getRelationship('r');
+
+          // elementId should be present (non-null) on Neo4j 5.0+
+          // or null on earlier versions
+          final elementId = rel.elementId;
+          if (elementId != null) {
+            // If elementId is present, it should be a non-empty string
+            expect(elementId, isA<String>());
+            expect(elementId, isNotEmpty);
+
+            // elementIdOrThrow should return the same value
+            expect(rel.elementIdOrThrow, equals(elementId));
+          } else {
+            // If elementId is null (pre-5.0), elementIdOrThrow should throw
+            expect(() => rel.elementIdOrThrow, throwsA(isA<StateError>()));
+          }
+
+          // Relationship should always have a numeric ID
+          expect(rel.id, isA<int>());
+          expect(rel.type, equals('TEST_REL'));
+          expect(rel.properties['prop'], equals('value'));
+
+          // Clean up
+          await session.run('MATCH (n:ElementIdTest) DETACH DELETE n');
+        },
+      );
     });
   });
 }

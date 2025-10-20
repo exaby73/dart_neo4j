@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:dart_bolt/dart_bolt.dart';
 import 'package:dart_neo4j/src/exceptions/type_exception.dart';
 import 'package:dart_neo4j/src/result/record.dart';

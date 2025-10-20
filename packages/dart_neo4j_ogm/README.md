@@ -34,7 +34,28 @@ part 'user.cypher.dart';
 
 @cypherNode
 class User {
-  final CypherId id;   // Required: All @cypherNode classes must have a CypherId id field
+  // Required: All @cypherNode classes must have an ID field
+  // Use CypherElementId for Neo4j 5.0+ (recommended)
+  final CypherElementId elementId;
+  final String name;
+  final String email;
+
+  const User({
+    required this.elementId,
+    required this.name,
+    required this.email,
+  });
+
+  factory User.fromNode(Node node) => _$UserFromNode(node);
+}
+```
+
+**Note:** For Neo4j 4.x or legacy code, you can use `CypherId` (deprecated):
+
+```dart
+@cypherNode
+class User {
+  final CypherId id;  // Deprecated: Use CypherElementId for Neo4j 5.0+
   final String name;
   final String email;
 
@@ -59,9 +80,9 @@ dart run build_runner build
 ```dart
 import 'package:dart_neo4j/dart_neo4j.dart';
 
-// Create a user instance (id will be set by Neo4j when creating nodes)
+// Create a user instance (elementId will be set by Neo4j when creating nodes)
 final user = User(
-  id: CypherId.none(),  // No id for new nodes - Neo4j will generate one when created
+  elementId: CypherElementId.none(),  // No elementId for new nodes - Neo4j will generate one
   name: 'John Doe',
   email: 'john@example.com',
 );
@@ -70,7 +91,7 @@ final user = User(
 final driver = Neo4jDriver.create('bolt://localhost:7687');
 final session = driver.session();
 
-// Create a node - id field is automatically excluded from properties
+// Create a node - elementId field is automatically excluded from properties
 await session.run(
   'CREATE ${user.toCypherWithPlaceholders('u')} RETURN u',
   user.cypherParameters,
@@ -78,15 +99,15 @@ await session.run(
 
 // The above generates: 'CREATE (u:User {name: $name, email: $email}) RETURN u'
 // With parameters: {'name': 'John Doe', 'email': 'john@example.com'}
-// Note: id is automatically excluded from Cypher properties
+// Note: elementId is automatically excluded from Cypher properties
 
 // Read nodes back using the fromNode factory
 final result = await session.run('MATCH (u:User) RETURN u LIMIT 1');
 final record = result.records.first;
 final node = record['u'] as Node;
-final userFromDb = User.fromNode(node);  // id comes from node.id, properties from node.properties
+final userFromDb = User.fromNode(node);  // elementId from node.elementId, properties from node.properties
 
-print('User ID from Neo4j: ${userFromDb.id}');  // Neo4j generated id
+print('User Element ID from Neo4j: ${userFromDb.elementId}');  // Neo4j generated elementId
 print('User name: ${userFromDb.name}');
 
 await session.close();
@@ -95,12 +116,59 @@ await driver.close();
 
 ## Advanced Usage
 
+### ID Field Requirements
+
+All `@cypherNode` classes must have at least one ID field:
+
+- **Recommended (Neo4j 5.0+):** Use `CypherElementId` for string-based element IDs
+- **Legacy (Neo4j 4.x):** Use `CypherId` for numeric IDs (deprecated)
+- **Migration:** You can have both types during migration
+
+**ID fields can have any name** (e.g., `id`, `elementId`, `nodeId`, `uid`). The generator identifies ID fields by their type, not their name.
+
+```dart
+// Neo4j 5.0+ style (recommended)
+@cypherNode
+class User {
+  final CypherElementId elementId;  // String-based element ID
+  final String name;
+
+  const User({required this.elementId, required this.name});
+  factory User.fromNode(Node node) => _$UserFromNode(node);
+}
+
+// Legacy style (still supported but deprecated)
+@cypherNode
+class LegacyUser {
+  final CypherId id;  // Numeric ID (deprecated)
+  final String name;
+
+  const LegacyUser({required this.id, required this.name});
+  factory LegacyUser.fromNode(Node node) => _$LegacyUserFromNode(node);
+}
+
+// Migration style (both IDs during transition)
+@cypherNode
+class HybridUser {
+  final CypherId legacyId;          // For backward compatibility
+  final CypherElementId elementId;   // For Neo4j 5.0+ compatibility
+  final String name;
+
+  const HybridUser({
+    required this.legacyId,
+    required this.elementId,
+    required this.name,
+  });
+  factory HybridUser.fromNode(Node node) => _$HybridUserFromNode(node);
+}
+```
+
 ### Custom Labels and Property Names
 
 ```dart
 @CypherNode(label: 'Person')  // Custom Neo4j label
 class Customer {
-  final CypherId id;   // Required: CypherId id field (automatically excluded from Cypher properties)
+  final CypherElementId elementId;  // ID field (automatically excluded from Cypher properties)
 
   @CypherProperty(name: 'fullName')  // Custom property name in Neo4j
   final String name;
@@ -111,7 +179,7 @@ class Customer {
   final double? price;  // Nullable fields are handled automatically
 
   const Customer({
-    required this.id,
+    required this.elementId,
     required this.name,
     required this.internalCode,
     this.price,
@@ -125,7 +193,7 @@ Generated usage:
 
 ```dart
 final customer = Customer(
-  id: CypherId.none(),  // No id for new nodes - Neo4j will generate one when created
+  elementId: CypherElementId.none(),  // No elementId for new nodes
   name: 'Jane Smith',
   internalCode: 'INTERNAL_123',
   price: 99.99,
@@ -134,11 +202,11 @@ final customer = Customer(
 print(customer.nodeLabel);  // 'Person'
 print(customer.cypherParameters);
 // {'fullName': 'Jane Smith', 'price': 99.99}
-// Note: id is automatically excluded, internalCode is excluded due to @CypherProperty(ignore: true)
+// Note: elementId is automatically excluded, internalCode is excluded due to @CypherProperty(ignore: true)
 
 print(customer.toCypherWithPlaceholders('c'));
 // '(c:Person {fullName: $fullName, price: $price})'
-// Note: id field is automatically excluded from Cypher properties
+// Note: ID fields are automatically excluded from Cypher properties
 ```
 
 ## Freezed Integration
@@ -172,7 +240,7 @@ part 'user.cypher.dart';
 @cypherNode
 class User with _$User {
   const factory User({
-    required CypherId id,  // Required: CypherId id field (automatically excluded from Cypher properties)
+    required CypherElementId elementId,  // ID field (automatically excluded from Cypher properties)
     required String name,
 
     @CypherProperty(name: 'emailAddress')
@@ -192,7 +260,7 @@ Usage with Freezed:
 
 ```dart
 final user = User(
-  id: CypherId.none(),  // No id for new nodes - Neo4j will generate one when created
+  elementId: CypherElementId.none(),  // No elementId for new nodes
   name: 'Alice Johnson',
   email: 'alice@example.com',
   password: 'secret123',
@@ -201,11 +269,11 @@ final user = User(
 
 print(user.cypherParameters);
 // {'name': 'Alice Johnson', 'emailAddress': 'alice@example.com', 'bio': 'Software Developer'}
-// Note: id is automatically excluded, password is excluded due to @CypherProperty(ignore: true)
+// Note: elementId is automatically excluded, password is excluded due to @CypherProperty(ignore: true)
 
 print(user.toCypherWithPlaceholders('u'));
 // '(u:User {name: $name, emailAddress: $emailAddress, bio: $bio})'
-// Note: id field is automatically excluded from Cypher properties
+// Note: ID fields are automatically excluded from Cypher properties
 ```
 
 ## JSON Serialization with Freezed + json_serializable
@@ -228,12 +296,19 @@ targets:
         enabled: true
 ```
 
-### CypherId JSON Serialization
+### ID JSON Serialization
 
-The package provides built-in helper functions for CypherId JSON serialization. These are automatically available when you import `dart_neo4j_ogm`:
+The package provides built-in helper functions for ID JSON serialization:
 
-- `cypherIdToJson(CypherId id)` - Converts CypherId to JSON (int? value)
-- `cypherIdFromJson(int? json)` - Creates CypherId from JSON value
+**For CypherElementId (recommended):**
+
+- `cypherElementIdToJson(CypherElementId elementId)` - Converts to JSON (String? value)
+- `cypherElementIdFromJson(String? json)` - Creates from JSON value
+
+**For CypherId (deprecated):**
+
+- `cypherIdToJson(CypherId id)` - Converts to JSON (int? value)
+- `cypherIdFromJson(int? json)` - Creates from JSON value
 
 ### Complete JSON + Neo4j Example
 
@@ -250,8 +325,8 @@ part 'json_user.cypher.dart';
 @CypherNode()
 class JsonUser with _$JsonUser {
   const factory JsonUser({
-    @JsonKey(toJson: cypherIdToJson, fromJson: cypherIdFromJson)
-    required CypherId id,
+    @JsonKey(toJson: cypherElementIdToJson, fromJson: cypherElementIdFromJson)
+    required CypherElementId elementId,
     required String name,
     required String email,
     @CypherProperty(name: 'userAge') int? age,
@@ -265,13 +340,33 @@ class JsonUser with _$JsonUser {
 }
 ```
 
+**For legacy CypherId (deprecated):**
+
+```dart
+@freezed
+@CypherNode()
+class LegacyJsonUser with _$LegacyJsonUser {
+  const factory LegacyJsonUser({
+    @JsonKey(toJson: cypherIdToJson, fromJson: cypherIdFromJson)
+    required CypherId id,  // Deprecated: Use CypherElementId
+    required String name,
+    required String email,
+  }) = _LegacyJsonUser;
+
+  factory LegacyJsonUser.fromJson(Map<String, dynamic> json) =>
+      _$LegacyJsonUserFromJson(json);
+
+  factory LegacyJsonUser.fromNode(Node node) => _$LegacyJsonUserFromNode(node);
+}
+```
+
 ### Usage with JSON and Neo4j
 
 ```dart
 Future<void> jsonExample() async {
   // 1. Create from JSON (e.g., from API request)
   final jsonData = {
-    'id': 123,
+    'elementId': '4:abc123:42',
     'name': 'John Doe',
     'email': 'john@example.com',
     'userAge': 30,
@@ -301,7 +396,7 @@ Future<void> jsonExample() async {
     // 4. Convert back to JSON (e.g., for API response)
     final jsonResponse = userFromDb.toJson();
     print('User as JSON: \$jsonResponse');
-    // Output: {id: 456, name: John Doe, email: john@example.com, userAge: 30, internalNotes: null}
+    // Output: {elementId: '4:abc123:99', name: John Doe, email: john@example.com, userAge: 30, internalNotes: null}
 
   } finally {
     await session.close();
@@ -340,8 +435,8 @@ dev_dependencies:
 When working with complex queries involving multiple nodes, parameter names can collide. The OGM provides prefixed methods to solve this:
 
 ```dart
-final user = User(id: CypherId.none(), name: 'John', email: 'john@example.com');
-final post = BlogPost(id: CypherId.none(), title: 'Hello World', content: 'My first post', name: 'John');
+final user = User(elementId: CypherElementId.none(), name: 'John', email: 'john@example.com');
+final post = BlogPost(elementId: CypherElementId.none(), title: 'Hello World', content: 'My first post', name: 'John');
 
 // Without prefixes - parameter collision on 'name'!
 // This would cause issues: {...user.cypherParameters, ...post.cypherParameters}
@@ -357,7 +452,7 @@ await session.run('''
   ...post.cypherParametersWithPrefix('post_'),
 });
 
-// Generated query (note: id fields are automatically excluded):
+// Generated query (note: ID fields are automatically excluded):
 // CREATE (u:User {name: $user_name, email: $user_email})
 // CREATE (p:BlogPost {title: $post_title, content: $post_content, name: $post_name})
 // CREATE (u)-[:AUTHORED]->(p)
@@ -375,7 +470,7 @@ The code generator creates extension methods on your annotated classes:
 
 ### Properties
 
-- **`cypherParameters`** - `Map<String, dynamic>` containing field values for Cypher queries (excludes id field)
+- **`cypherParameters`** - `Map<String, dynamic>` containing field values for Cypher queries (excludes ID fields)
 - **`cypherProperties`** - `String` containing Cypher node properties syntax with parameter placeholders (e.g., `{name: $name, email: $email}`)
 - **`nodeLabel`** - `String` containing the Neo4j node label (from annotation or class name)
 - **`cypherPropertyNames`** - `List<String>` containing the property names used in Cypher
@@ -392,7 +487,10 @@ The code generator creates extension methods on your annotated classes:
 
 The generator creates static factory methods for creating instances from Neo4j Node objects:
 
-- **`fromNode(Node node)`** - Creates an instance from a Neo4j Node object, extracting the id from `node.id` and other properties from `node.properties`
+- **`fromNode(Node node)`** - Creates an instance from a Neo4j Node object
+  - For `CypherElementId` fields: extracts from `node.elementIdOrThrow`
+  - For `CypherId` fields (deprecated): extracts from `node.id`
+  - Other properties extracted from `node.properties`
 
 ## Annotations Reference
 
@@ -438,27 +536,27 @@ part 'models.cypher.dart';
 
 @cypherNode
 class User {
-  final CypherId id;  // Required CypherId id field
+  final CypherElementId elementId;  // ID field (any name allowed)
   final String name;
   final String email;
 
-  const User({required this.id, required this.name, required this.email});
+  const User({required this.elementId, required this.name, required this.email});
 
   factory User.fromNode(Node node) => _$UserFromNode(node);
 }
 
 @CypherNode(label: 'Post')
 class BlogPost {
-  final CypherId id;  // Required CypherId id field
+  final CypherElementId elementId;  // ID field (any name allowed)
   final String title;
   final String content;
-  final CypherId authorId;
+  final String? authorElementId;  // Store as String for Neo4j 5.0+ compatibility
 
   const BlogPost({
-    required this.id,
+    required this.elementId,
     required this.title,
     required this.content,
-    required this.authorId,
+    this.authorElementId,
   });
 
   factory BlogPost.fromNode(Node node) => _$BlogPostFromNode(node);
@@ -469,12 +567,12 @@ Future<void> example() async {
   final driver = Neo4jDriver.create('bolt://localhost:7687');
   final session = driver.session();
 
-  final user = User(id: CypherId.none(), name: 'John', email: 'john@example.com');
+  final user = User(elementId: CypherElementId.none(), name: 'John', email: 'john@example.com');
   final post = BlogPost(
-    id: CypherId.none(),
+    elementId: CypherElementId.none(),
     title: 'Hello World',
     content: 'My first post',
-    authorId: CypherId.none(),  // Will be set to actual user id after creation
+    authorElementId: null,  // Will be set to actual user elementId after creation
   );
 
   try {
@@ -486,27 +584,27 @@ Future<void> example() async {
     final createdUserNode = userResult.records.first['u'] as Node;
     final createdUser = User.fromNode(createdUserNode);
 
-    // Update post with actual user id
+    // Update post with actual user elementId
     final postWithUserId = BlogPost(
-      id: CypherId.none(),
+      elementId: CypherElementId.none(),
       title: post.title,
       content: post.content,
-      authorId: CypherId.value(createdUser.id.idOrThrow),
+      authorElementId: createdUser.elementId.elementIdOrThrow,
     );
 
     await session.run('''
-      MATCH (u:User) WHERE id(u) = \$authorId
+      MATCH (u:User) WHERE elementId(u) = \$authorElementId
       CREATE ${postWithUserId.toCypherWithPlaceholders('p')}
       CREATE (u)-[:AUTHORED]->(p)
     ''', postWithUserId.cypherParameters);
 
     // Option 2: Create both nodes with prefixed parameters (no relationship)
-    final newUser = User(id: CypherId.none(), name: 'Jane', email: 'jane@example.com');
+    final newUser = User(elementId: CypherElementId.none(), name: 'Jane', email: 'jane@example.com');
     final newPost = BlogPost(
-      id: CypherId.none(),
+      elementId: CypherElementId.none(),
       title: 'Another Post',
       content: 'Different content',
-      authorId: CypherId.none(),
+      authorElementId: null,
     );
 
     await session.run('''
@@ -517,13 +615,13 @@ Future<void> example() async {
       ...newPost.cypherParametersWithPrefix('post_'),
     });
 
-    // The above generates (note: id fields are automatically excluded):
+    // The above generates (note: elementId fields are automatically excluded):
     // CREATE (u:User {name: $user_name, email: $user_email})
-    // CREATE (p:Post {title: $post_title, content: $post_content, authorId: $post_authorId})
+    // CREATE (p:Post {title: $post_title, content: $post_content, authorElementId: $post_authorElementId})
     //
     // With parameters: {
     //   'user_name': 'Jane', 'user_email': 'jane@example.com',
-    //   'post_title': 'Another Post', 'post_content': 'Different content', 'post_authorId': null
+    //   'post_title': 'Another Post', 'post_content': 'Different content', 'post_authorElementId': null
     // }
 
     // Query with results using fromNode factories
@@ -539,8 +637,8 @@ Future<void> example() async {
       final retrievedUser = User.fromNode(userNode);
       final retrievedPost = BlogPost.fromNode(postNode);
 
-      print('User: ${retrievedUser.name} (ID: ${retrievedUser.id.idOrThrow})');
-      print('Post: ${retrievedPost.title} (ID: ${retrievedPost.id.idOrThrow})');
+      print('User: ${retrievedUser.name} (ElementID: ${retrievedUser.elementId.elementIdOrThrow})');
+      print('Post: ${retrievedPost.title} (ElementID: ${retrievedPost.elementId.elementIdOrThrow})');
     }
 
   } finally {

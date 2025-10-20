@@ -61,6 +61,12 @@ class CypherGenerator extends GeneratorForAnnotation<CypherNode> {
     final includeFromNode = AnnotationReader.extractIncludeFromNode(annotation);
     final fields = _extractFieldInfo(element);
 
+    // Determine which ID types are present
+    final hasCypherId = fields.any((field) => field.isCypherIdField);
+    final hasCypherElementId = fields.any(
+      (field) => field.isCypherElementIdField,
+    );
+
     // Validate factory constructor if includeFromNode is true
     if (includeFromNode) {
       _validateFromNodeFactory(element, className);
@@ -71,6 +77,8 @@ class CypherGenerator extends GeneratorForAnnotation<CypherNode> {
       label: label,
       fields: fields,
       includeFromNode: includeFromNode,
+      hasCypherId: hasCypherId,
+      hasCypherElementId: hasCypherElementId,
     );
   }
 
@@ -95,26 +103,43 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
     }
   }
 
-  /// Validates that the class has a required CypherId id field.
+  /// Validates that the class has at least one ID field (CypherId or CypherElementId).
+  /// Also validates that there is only one occurrence of each type.
   void _validateIdField(ClassElement2 element) {
     final processableFields = AnnotationReader.getProcessableFields(element);
 
     // Check if we have fields available (normal case or after Freezed has run)
     if (processableFields.isNotEmpty) {
-      final idField =
-          processableFields.where((field) => field.name3 == 'id').firstOrNull;
+      final cypherIdFields = processableFields
+          .where((field) => field.type.getDisplayString() == 'CypherId')
+          .toList();
+      final cypherElementIdFields = processableFields
+          .where((field) => field.type.getDisplayString() == 'CypherElementId')
+          .toList();
 
-      if (idField == null) {
+      // Validate at least one ID field exists
+      if (cypherIdFields.isEmpty && cypherElementIdFields.isEmpty) {
         throw InvalidGenerationSourceError(
-          'Classes annotated with @cypherNode must have a CypherId id field',
+          'Classes annotated with @cypherNode must have at least one ID field '
+          'of type CypherId or CypherElementId',
           element: element,
         );
       }
 
-      final idFieldType = idField.type.getDisplayString();
-      if (idFieldType != 'CypherId') {
+      // Validate only one occurrence of CypherId
+      if (cypherIdFields.length > 1) {
         throw InvalidGenerationSourceError(
-          'The id field must be of type CypherId, found: $idFieldType',
+          'Classes annotated with @cypherNode can only have one CypherId field. '
+          'Found ${cypherIdFields.length} fields: ${cypherIdFields.map((f) => f.name3).join(', ')}',
+          element: element,
+        );
+      }
+
+      // Validate only one occurrence of CypherElementId
+      if (cypherElementIdFields.length > 1) {
+        throw InvalidGenerationSourceError(
+          'Classes annotated with @cypherNode can only have one CypherElementId field. '
+          'Found ${cypherElementIdFields.length} fields: ${cypherElementIdFields.map((f) => f.name3).join(', ')}',
           element: element,
         );
       }
@@ -123,22 +148,36 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
       final constructorFieldInfo = AnnotationReader.getFieldInfoFromConstructor(
         element,
       );
-      final idFieldData =
-          constructorFieldInfo
-              .where((fieldData) => fieldData['name'] == 'id')
-              .firstOrNull;
+      final cypherIdFields = constructorFieldInfo
+          .where((fieldData) => fieldData['type'] == 'CypherId')
+          .toList();
+      final cypherElementIdFields = constructorFieldInfo
+          .where((fieldData) => fieldData['type'] == 'CypherElementId')
+          .toList();
 
-      if (idFieldData == null) {
+      // Validate at least one ID field exists
+      if (cypherIdFields.isEmpty && cypherElementIdFields.isEmpty) {
         throw InvalidGenerationSourceError(
-          'Classes annotated with @cypherNode must have a CypherId id field',
+          'Classes annotated with @cypherNode must have at least one ID field '
+          'of type CypherId or CypherElementId',
           element: element,
         );
       }
 
-      final idFieldType = idFieldData['type'] as String;
-      if (idFieldType != 'CypherId') {
+      // Validate only one occurrence of CypherId
+      if (cypherIdFields.length > 1) {
         throw InvalidGenerationSourceError(
-          'The id field must be of type CypherId, found: $idFieldType',
+          'Classes annotated with @cypherNode can only have one CypherId field. '
+          'Found ${cypherIdFields.length} fields: ${cypherIdFields.map((f) => f['name']).join(', ')}',
+          element: element,
+        );
+      }
+
+      // Validate only one occurrence of CypherElementId
+      if (cypherElementIdFields.length > 1) {
+        throw InvalidGenerationSourceError(
+          'Classes annotated with @cypherNode can only have one CypherElementId field. '
+          'Found ${cypherElementIdFields.length} fields: ${cypherElementIdFields.map((f) => f['name']).join(', ')}',
           element: element,
         );
       }
@@ -155,7 +194,9 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
         final fieldName = field.name3 ?? 'unknownField';
         final fieldType = field.type.getDisplayString();
         final cypherName = AnnotationReader.getCypherPropertyName(field);
-        final isIdField = fieldName == 'id';
+        final isCypherIdField = fieldType == 'CypherId';
+        final isCypherElementIdField = fieldType == 'CypherElementId';
+        final isIdField = isCypherIdField || isCypherElementIdField;
         // Id fields are always ignored for Cypher properties, regardless of @CypherProperty annotation
         final isIgnored = isIdField || AnnotationReader.isFieldIgnored(field);
 
@@ -164,7 +205,8 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
           type: fieldType,
           cypherName: cypherName,
           isIgnored: isIgnored,
-          isIdField: isIdField,
+          isCypherIdField: isCypherIdField,
+          isCypherElementIdField: isCypherElementIdField,
         );
       }).toList();
     }
@@ -177,16 +219,20 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
 
     return constructorFieldInfo.map((fieldData) {
       final fieldName = fieldData['name'] as String;
-      final isIdField = fieldName == 'id';
+      final fieldType = fieldData['type'] as String;
+      final isCypherIdField = fieldType == 'CypherId';
+      final isCypherElementIdField = fieldType == 'CypherElementId';
+      final isIdField = isCypherIdField || isCypherElementIdField;
       // Id fields are always ignored for Cypher properties, regardless of @CypherProperty annotation
       final isIgnored = isIdField || (fieldData['isIgnored'] as bool);
 
       return FieldInfo(
         name: fieldName,
-        type: fieldData['type'] as String,
+        type: fieldType,
         cypherName: fieldData['cypherName'] as String,
         isIgnored: isIgnored,
-        isIdField: isIdField,
+        isCypherIdField: isCypherIdField,
+        isCypherElementIdField: isCypherElementIdField,
       );
     }).toList();
   }

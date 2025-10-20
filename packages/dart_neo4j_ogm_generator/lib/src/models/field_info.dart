@@ -8,7 +8,8 @@ class FieldInfo {
     required this.type,
     required this.cypherName,
     required this.isIgnored,
-    this.isIdField = false,
+    this.isCypherIdField = false,
+    this.isCypherElementIdField = false,
   });
 
   /// The original field name in the Dart class.
@@ -23,8 +24,14 @@ class FieldInfo {
   /// Whether this field should be ignored in Cypher generation.
   final bool isIgnored;
 
-  /// Whether this field is the mandatory id field.
-  final bool isIdField;
+  /// Whether this field is a CypherId field (legacy integer ID).
+  final bool isCypherIdField;
+
+  /// Whether this field is a CypherElementId field (Neo4j 5.0+ string element ID).
+  final bool isCypherElementIdField;
+
+  /// Whether this field is an ID field (either CypherId or CypherElementId).
+  bool get isIdField => isCypherIdField || isCypherElementIdField;
 
   /// Converts the field info to a map for template rendering.
   Map<String, dynamic> toMap() {
@@ -34,6 +41,8 @@ class FieldInfo {
       'cypherName': cypherName,
       'isIgnored': isIgnored,
       'isIdField': isIdField,
+      'isCypherIdField': isCypherIdField,
+      'isCypherElementIdField': isCypherElementIdField,
     };
   }
 }
