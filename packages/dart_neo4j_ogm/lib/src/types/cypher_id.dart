@@ -3,6 +3,9 @@
 /// This sealed class allows creating nodes without an ID (before CREATE operations)
 /// and accessing the ID safely after the node has been persisted to Neo4j.
 ///
+/// **Deprecated:** This type uses the legacy numeric ID which is deprecated in Neo4j 5.0+.
+/// Use [CypherElementId] instead for Neo4j 5.0+ compatibility.
+///
 /// ## Usage with json_serializable
 ///
 /// ```dart
@@ -18,6 +21,11 @@
 ///   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
 /// }
 /// ```
+@Deprecated(
+  'Use CypherElementId instead. '
+  'The id() function is deprecated in Neo4j 5.0+. '
+  'See https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id',
+)
 sealed class CypherId {
   const CypherId._();
 
@@ -64,6 +72,7 @@ sealed class CypherId {
 }
 
 /// Internal implementation for CypherId with a value.
+// ignore: deprecated_member_use_from_same_package
 final class _CypherIdValue extends CypherId {
   const _CypherIdValue(this.id) : super._();
 
@@ -84,6 +93,7 @@ final class _CypherIdValue extends CypherId {
 }
 
 /// Internal implementation for CypherId with no value.
+// ignore: deprecated_member_use_from_same_package
 final class _CypherNoId extends CypherId {
   const _CypherNoId() : super._();
 
@@ -101,8 +111,20 @@ final class _CypherNoId extends CypherId {
 
 /// Top-level helper function for json_serializable toJson conversion.
 /// Use with @JsonKey(toJson: cypherIdToJson)
+///
+/// **Deprecated:** Use [cypherElementIdToJson] with [CypherElementId] instead.
+@Deprecated(
+  'Use cypherElementIdToJson with CypherElementId instead. '
+  'The id() function is deprecated in Neo4j 5.0+.',
+)
 int? cypherIdToJson(CypherId id) => id.toJson();
 
 /// Top-level helper function for json_serializable fromJson conversion.
 /// Use with @JsonKey(fromJson: cypherIdFromJson)
+///
+/// **Deprecated:** Use [cypherElementIdFromJson] with [CypherElementId] instead.
+@Deprecated(
+  'Use cypherElementIdFromJson with CypherElementId instead. '
+  'The id() function is deprecated in Neo4j 5.0+.',
+)
 CypherId cypherIdFromJson(int? json) => CypherId.fromJson(json);
