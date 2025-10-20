@@ -1,3 +1,9 @@
+## 1.0.0
+
+### Stable Release
+
+- First stable release of dart_bolt
+
 ## 0.2.0
 
 - Updated Dart SDK requirement to ^3.8.0
