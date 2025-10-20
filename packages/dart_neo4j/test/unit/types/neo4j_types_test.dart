@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:dart_bolt/dart_bolt.dart';
 import 'package:dart_neo4j/src/exceptions/type_exception.dart';
 import 'package:dart_neo4j/src/types/neo4j_types.dart';
@@ -109,6 +111,71 @@ void main() {
 
         expect(node, isNot(equals(node2)));
       });
+
+      group('elementId', () {
+        test('should return null when node has no element ID (pre-5.0)', () {
+          final boltNodeWithoutElementId = BoltNode(
+            PsInt.compact(123),
+            PsList([PsString('Person')]),
+            PsDictionary({PsString('name'): PsString('John')}),
+          );
+          final node = Node.fromBolt(boltNodeWithoutElementId);
+
+          expect(node.elementId, isNull);
+        });
+
+        test('should return element ID when present (5.0+)', () {
+          final boltNodeWithElementId = BoltNode(
+            PsInt.compact(123),
+            PsList([PsString('Person')]),
+            PsDictionary({PsString('name'): PsString('John')}),
+            elementId: PsString('4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:123'),
+          );
+          final node = Node.fromBolt(boltNodeWithElementId);
+
+          expect(
+            node.elementId,
+            equals('4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:123'),
+          );
+        });
+      });
+
+      group('elementIdOrThrow', () {
+        test('should throw StateError when node has no element ID', () {
+          final boltNodeWithoutElementId = BoltNode(
+            PsInt.compact(123),
+            PsList([PsString('Person')]),
+            PsDictionary({PsString('name'): PsString('John')}),
+          );
+          final node = Node.fromBolt(boltNodeWithoutElementId);
+
+          expect(
+            () => node.elementIdOrThrow,
+            throwsA(
+              isA<StateError>().having(
+                (e) => e.message,
+                'message',
+                equals('Node has no element ID'),
+              ),
+            ),
+          );
+        });
+
+        test('should return element ID when present (5.0+)', () {
+          final boltNodeWithElementId = BoltNode(
+            PsInt.compact(123),
+            PsList([PsString('Person')]),
+            PsDictionary({PsString('name'): PsString('John')}),
+            elementId: PsString('4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:123'),
+          );
+          final node = Node.fromBolt(boltNodeWithElementId);
+
+          expect(
+            node.elementIdOrThrow,
+            equals('4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:123'),
+          );
+        });
+      });
     });
 
     group('Relationship', () {
@@ -191,6 +258,94 @@ void main() {
         expect(relationship, equals(rel2));
         expect(relationship.hashCode, equals(rel2.hashCode));
       });
+
+      group('elementId', () {
+        test(
+          'should return null when relationship has no element ID (pre-5.0)',
+          () {
+            final boltRelWithoutElementId = BoltRelationship(
+              PsInt.compact(456),
+              PsInt.compact(123),
+              PsInt.compact(789),
+              PsString('KNOWS'),
+              PsDictionary({PsString('since'): PsInt.compact(2020)}),
+            );
+            final rel = Relationship.fromBolt(boltRelWithoutElementId);
+
+            expect(rel.elementId, isNull);
+          },
+        );
+
+        test('should return element ID when present (5.0+)', () {
+          final boltRelWithElementId = BoltRelationship(
+            PsInt.compact(456),
+            PsInt.compact(123),
+            PsInt.compact(789),
+            PsString('KNOWS'),
+            PsDictionary({PsString('since'): PsInt.compact(2020)}),
+            elementId: PsString('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+            startNodeElementId: PsString(
+              '4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:123',
+            ),
+            endNodeElementId: PsString(
+              '4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:789',
+            ),
+          );
+          final rel = Relationship.fromBolt(boltRelWithElementId);
+
+          expect(
+            rel.elementId,
+            equals('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+          );
+        });
+      });
+
+      group('elementIdOrThrow', () {
+        test('should throw StateError when relationship has no element ID', () {
+          final boltRelWithoutElementId = BoltRelationship(
+            PsInt.compact(456),
+            PsInt.compact(123),
+            PsInt.compact(789),
+            PsString('KNOWS'),
+            PsDictionary({PsString('since'): PsInt.compact(2020)}),
+          );
+          final rel = Relationship.fromBolt(boltRelWithoutElementId);
+
+          expect(
+            () => rel.elementIdOrThrow,
+            throwsA(
+              isA<StateError>().having(
+                (e) => e.message,
+                'message',
+                equals('Relationship has no element ID'),
+              ),
+            ),
+          );
+        });
+
+        test('should return element ID when present (5.0+)', () {
+          final boltRelWithElementId = BoltRelationship(
+            PsInt.compact(456),
+            PsInt.compact(123),
+            PsInt.compact(789),
+            PsString('KNOWS'),
+            PsDictionary({PsString('since'): PsInt.compact(2020)}),
+            elementId: PsString('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+            startNodeElementId: PsString(
+              '4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:123',
+            ),
+            endNodeElementId: PsString(
+              '4:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:789',
+            ),
+          );
+          final rel = Relationship.fromBolt(boltRelWithElementId);
+
+          expect(
+            rel.elementIdOrThrow,
+            equals('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+          );
+        });
+      });
     });
 
     group('UnboundRelationship', () {
@@ -234,6 +389,78 @@ void main() {
         expect(str, contains('UnboundRelationship'));
         expect(str, contains('456'));
         expect(str, contains('KNOWS'));
+      });
+
+      group('elementId', () {
+        test(
+          'should return null when relationship has no element ID (pre-5.0)',
+          () {
+            final boltUnboundRelWithoutElementId = BoltUnboundRelationship(
+              PsInt.compact(456),
+              PsString('KNOWS'),
+              PsDictionary({PsString('since'): PsInt.compact(2020)}),
+            );
+            final rel = UnboundRelationship.fromBolt(
+              boltUnboundRelWithoutElementId,
+            );
+
+            expect(rel.elementId, isNull);
+          },
+        );
+
+        test('should return element ID when present (5.0+)', () {
+          final boltUnboundRelWithElementId = BoltUnboundRelationship(
+            PsInt.compact(456),
+            PsString('KNOWS'),
+            PsDictionary({PsString('since'): PsInt.compact(2020)}),
+            elementId: PsString('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+          );
+          final rel = UnboundRelationship.fromBolt(boltUnboundRelWithElementId);
+
+          expect(
+            rel.elementId,
+            equals('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+          );
+        });
+      });
+
+      group('elementIdOrThrow', () {
+        test('should throw StateError when relationship has no element ID', () {
+          final boltUnboundRelWithoutElementId = BoltUnboundRelationship(
+            PsInt.compact(456),
+            PsString('KNOWS'),
+            PsDictionary({PsString('since'): PsInt.compact(2020)}),
+          );
+          final rel = UnboundRelationship.fromBolt(
+            boltUnboundRelWithoutElementId,
+          );
+
+          expect(
+            () => rel.elementIdOrThrow,
+            throwsA(
+              isA<StateError>().having(
+                (e) => e.message,
+                'message',
+                equals('UnboundRelationship has no element ID'),
+              ),
+            ),
+          );
+        });
+
+        test('should return element ID when present (5.0+)', () {
+          final boltUnboundRelWithElementId = BoltUnboundRelationship(
+            PsInt.compact(456),
+            PsString('KNOWS'),
+            PsDictionary({PsString('since'): PsInt.compact(2020)}),
+            elementId: PsString('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+          );
+          final rel = UnboundRelationship.fromBolt(boltUnboundRelWithElementId);
+
+          expect(
+            rel.elementIdOrThrow,
+            equals('5:08c55c08-9999-4242-b05b-0c0f0c0f0c0f:456'),
+          );
+        });
       });
     });
 

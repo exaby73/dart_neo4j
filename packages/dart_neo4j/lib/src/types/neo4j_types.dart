@@ -14,7 +14,30 @@ class Node {
   }
 
   /// The unique identifier of the node.
+  ///
+  /// **Deprecated:** This property uses the legacy numeric ID which is deprecated in Neo4j 5.0+.
+  /// Use [elementId] or [elementIdOrThrow] instead.
+  ///
+  /// See: https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id
+  @Deprecated(
+    'Use elementId or elementIdOrThrow instead. '
+    'The id() function is deprecated in Neo4j 5.0+. '
+    'See https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id',
+  )
   int get id => _boltNode.id.dartValue;
+
+  /// The element ID of the node.
+  String? get elementId => _boltNode.elementId?.dartValue;
+
+  /// The element ID of the node.
+  ///
+  /// Throws [StateError] if the node has no element ID.
+  ///
+  /// Requires Neo4j 5.0+ to be used as `elementId` is not supported in earlier versions.
+  String get elementIdOrThrow => switch (_boltNode.elementId?.dartValue) {
+    String value => value,
+    null => throw StateError('Node has no element ID'),
+  };
 
   /// The labels assigned to the node.
   List<String> get labels =>
@@ -77,17 +100,37 @@ class Node {
 
   @override
   String toString() {
-    return 'Node{id: $id, labels: $labels, properties: $properties}';
+    final elementIdStr = elementId != null ? ', elementId: $elementId' : '';
+    // ignore: deprecated_member_use_from_same_package
+    return 'Node{id: $id$elementIdStr, labels: $labels, properties: $properties}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Node && other.id == id;
+    if (other is! Node) return false;
+
+    // Prefer elementId for comparison when available on both nodes
+    if (elementId != null && other.elementId != null) {
+      return elementId == other.elementId;
+    }
+
+    // Fall back to id comparison for backward compatibility
+    // ignore: deprecated_member_use_from_same_package
+    return id == other.id;
   }
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode {
+    // Prefer elementId for hash code when available
+    if (elementId != null) {
+      return elementId.hashCode;
+    }
+
+    // Fall back to id for backward compatibility
+    // ignore: deprecated_member_use_from_same_package
+    return id.hashCode;
+  }
 }
 
 /// A relationship in a Neo4j graph.
@@ -103,7 +146,31 @@ class Relationship {
   }
 
   /// The unique identifier of the relationship.
+  ///
+  /// **Deprecated:** This property uses the legacy numeric ID which is deprecated in Neo4j 5.0+.
+  /// Use [elementId] or [elementIdOrThrow] instead.
+  ///
+  /// See: https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id
+  @Deprecated(
+    'Use elementId or elementIdOrThrow instead. '
+    'The id() function is deprecated in Neo4j 5.0+. '
+    'See https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id',
+  )
   int get id => _boltRelationship.id.dartValue;
+
+  /// The element ID of the relationship.
+  String? get elementId => _boltRelationship.elementId?.dartValue;
+
+  /// The element ID of the relationship.
+  ///
+  /// Throws [StateError] if the relationship has no element ID.
+  ///
+  /// Requires Neo4j 5.0+ to be used as `elementId` is not supported in earlier versions.
+  String get elementIdOrThrow =>
+      switch (_boltRelationship.elementId?.dartValue) {
+        String value => value,
+        null => throw StateError('Relationship has no element ID'),
+      };
 
   /// The type of the relationship.
   String get type => _boltRelationship.type.dartValue;
@@ -166,17 +233,37 @@ class Relationship {
 
   @override
   String toString() {
-    return 'Relationship{id: $id, type: $type, startNodeId: $startNodeId, endNodeId: $endNodeId, properties: $properties}';
+    final elementIdStr = elementId != null ? ', elementId: $elementId' : '';
+    // ignore: deprecated_member_use_from_same_package
+    return 'Relationship{id: $id$elementIdStr, type: $type, startNodeId: $startNodeId, endNodeId: $endNodeId, properties: $properties}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Relationship && other.id == id;
+    if (other is! Relationship) return false;
+
+    // Prefer elementId for comparison when available on both relationships
+    if (elementId != null && other.elementId != null) {
+      return elementId == other.elementId;
+    }
+
+    // Fall back to id comparison for backward compatibility
+    // ignore: deprecated_member_use_from_same_package
+    return id == other.id;
   }
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode {
+    // Prefer elementId for hash code when available
+    if (elementId != null) {
+      return elementId.hashCode;
+    }
+
+    // Fall back to id for backward compatibility
+    // ignore: deprecated_member_use_from_same_package
+    return id.hashCode;
+  }
 }
 
 /// An unbound relationship (without start/end node IDs).
@@ -194,7 +281,29 @@ class UnboundRelationship {
   }
 
   /// The unique identifier of the relationship.
+  ///
+  /// **Deprecated:** This property uses the legacy numeric ID which is deprecated in Neo4j 5.0+.
+  ///
+  /// See: https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id
+  @Deprecated(
+    'The id() function is deprecated in Neo4j 5.0+. '
+    'See https://neo4j.com/docs/cypher-manual/5/functions/scalar/#functions-id',
+  )
   int get id => _boltUnboundRelationship.id.dartValue;
+
+  /// The element ID of the relationship.
+  String? get elementId => _boltUnboundRelationship.elementId?.dartValue;
+
+  /// The element ID of the relationship.
+  ///
+  /// Throws [StateError] if the relationship has no element ID.
+  ///
+  /// Requires Neo4j 5.0+ to be used as `elementId` is not supported in earlier versions.
+  String get elementIdOrThrow =>
+      switch (_boltUnboundRelationship.elementId?.dartValue) {
+        String value => value,
+        null => throw StateError('UnboundRelationship has no element ID'),
+      };
 
   /// The type of the relationship.
   String get type => _boltUnboundRelationship.type.dartValue;
@@ -252,17 +361,37 @@ class UnboundRelationship {
 
   @override
   String toString() {
-    return 'UnboundRelationship{id: $id, type: $type, properties: $properties}';
+    final elementIdStr = elementId != null ? ', elementId: $elementId' : '';
+    // ignore: deprecated_member_use_from_same_package
+    return 'UnboundRelationship{id: $id$elementIdStr, type: $type, properties: $properties}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is UnboundRelationship && other.id == id;
+    if (other is! UnboundRelationship) return false;
+
+    // Prefer elementId for comparison when available on both relationships
+    if (elementId != null && other.elementId != null) {
+      return elementId == other.elementId;
+    }
+
+    // Fall back to id comparison for backward compatibility
+    // ignore: deprecated_member_use_from_same_package
+    return id == other.id;
   }
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode {
+    // Prefer elementId for hash code when available
+    if (elementId != null) {
+      return elementId.hashCode;
+    }
+
+    // Fall back to id for backward compatibility
+    // ignore: deprecated_member_use_from_same_package
+    return id.hashCode;
+  }
 }
 
 /// A path in a Neo4j graph, consisting of nodes and relationships.
@@ -273,18 +402,15 @@ class Path {
 
   /// Creates a new path from a Bolt path.
   Path._(this._boltPath)
-    : _nodes =
-          _boltPath.nodes
-              .map((node) => Node.fromBolt(node as BoltNode))
-              .toList(),
-      _relationships =
-          _boltPath.relationships
-              .map(
-                (rel) => UnboundRelationship.fromBolt(
-                  rel as BoltUnboundRelationship,
-                ),
-              )
-              .toList();
+    : _nodes = _boltPath.nodes
+          .map((node) => Node.fromBolt(node as BoltNode))
+          .toList(),
+      _relationships = _boltPath.relationships
+          .map(
+            (rel) =>
+                UnboundRelationship.fromBolt(rel as BoltUnboundRelationship),
+          )
+          .toList();
 
   /// Creates a path from a Bolt path.
   factory Path.fromBolt(BoltPath boltPath) {

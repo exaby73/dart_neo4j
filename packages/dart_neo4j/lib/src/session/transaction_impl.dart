@@ -90,9 +90,8 @@ abstract class TransactionImpl implements Transaction {
       await _pooledConnection.connection.rollbackTransaction();
       _state = TransactionState.rolledBack;
     } catch (e) {
-      _state =
-          TransactionState
-              .rolledBack; // Still mark as rolled back even if message fails
+      _state = TransactionState
+          .rolledBack; // Still mark as rolled back even if message fails
       throw DatabaseException('Failed to rollback transaction: $e', null, e);
     } finally {
       await _cleanup();
