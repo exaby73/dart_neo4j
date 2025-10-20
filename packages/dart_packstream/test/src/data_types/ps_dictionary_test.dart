@@ -244,10 +244,9 @@ void main() {
       );
 
       // Dictionary with size but no data
-      final insufficientBytes2 =
-          ByteData(2)
-            ..setUint8(0, 0xD8)
-            ..setUint8(1, 1);
+      final insufficientBytes2 = ByteData(2)
+        ..setUint8(0, 0xD8)
+        ..setUint8(1, 1);
       expect(
         () => PsDictionary.fromPackStreamBytes(insufficientBytes2),
         throwsA(isA<ArgumentError>()),
@@ -256,12 +255,11 @@ void main() {
 
     test('throws ArgumentError if key is not a string', () {
       // Mock a dictionary where the key is not a string
-      final invalidKeyBytes =
-          ByteData(4)
-            ..setUint8(0, 0xA1) // Dictionary with 1 entry
-            ..setUint8(1, 0x01) // Integer key (invalid)
-            ..setUint8(2, 0x81) // String value marker
-            ..setUint8(3, 0x61); // 'a'
+      final invalidKeyBytes = ByteData(4)
+        ..setUint8(0, 0xA1) // Dictionary with 1 entry
+        ..setUint8(1, 0x01) // Integer key (invalid)
+        ..setUint8(2, 0x81) // String value marker
+        ..setUint8(3, 0x61); // 'a'
       expect(
         () => PsDictionary.fromPackStreamBytes(invalidKeyBytes),
         throwsA(

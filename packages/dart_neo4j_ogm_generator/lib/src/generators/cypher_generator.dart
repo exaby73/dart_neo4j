@@ -101,8 +101,9 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
 
     // Check if we have fields available (normal case or after Freezed has run)
     if (processableFields.isNotEmpty) {
-      final idField =
-          processableFields.where((field) => field.name3 == 'id').firstOrNull;
+      final idField = processableFields
+          .where((field) => field.name3 == 'id')
+          .firstOrNull;
 
       if (idField == null) {
         throw InvalidGenerationSourceError(
@@ -123,10 +124,9 @@ factory $className.fromNode(Node node) => _\$${className}FromNode(node);''';
       final constructorFieldInfo = AnnotationReader.getFieldInfoFromConstructor(
         element,
       );
-      final idFieldData =
-          constructorFieldInfo
-              .where((fieldData) => fieldData['name'] == 'id')
-              .firstOrNull;
+      final idFieldData = constructorFieldInfo
+          .where((fieldData) => fieldData['name'] == 'id')
+          .firstOrNull;
 
       if (idFieldData == null) {
         throw InvalidGenerationSourceError(

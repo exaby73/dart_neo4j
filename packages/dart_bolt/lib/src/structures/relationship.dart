@@ -24,15 +24,15 @@ class BoltRelationship extends PsStructure {
          0x52, // 'R'
          elementId != null
              ? [
-               id,
-               startNodeId,
-               endNodeId,
-               type,
-               properties,
-               elementId,
-               startNodeElementId!,
-               endNodeElementId!,
-             ]
+                 id,
+                 startNodeId,
+                 endNodeId,
+                 type,
+                 properties,
+                 elementId,
+                 startNodeElementId!,
+                 endNodeElementId!,
+               ]
              : [id, startNodeId, endNodeId, type, properties],
        );
 

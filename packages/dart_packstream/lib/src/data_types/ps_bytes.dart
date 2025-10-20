@@ -141,30 +141,27 @@ final class PsBytes extends PsDataType<Uint8List, Uint8List>
 
     if (length <= 0xFF) {
       // 8-bit size
-      bytes =
-          ByteData(2 + length)
-            ..setUint8(0, 0xCC)
-            ..setUint8(1, length);
+      bytes = ByteData(2 + length)
+        ..setUint8(0, 0xCC)
+        ..setUint8(1, length);
 
       for (var i = 0; i < length; i++) {
         bytes.setUint8(2 + i, value[i]);
       }
     } else if (length <= 0xFFFF) {
       // 16-bit size
-      bytes =
-          ByteData(3 + length)
-            ..setUint8(0, 0xCD)
-            ..setUint16(1, length, Endian.big);
+      bytes = ByteData(3 + length)
+        ..setUint8(0, 0xCD)
+        ..setUint16(1, length, Endian.big);
 
       for (var i = 0; i < length; i++) {
         bytes.setUint8(3 + i, value[i]);
       }
     } else {
       // 32-bit size
-      bytes =
-          ByteData(5 + length)
-            ..setUint8(0, 0xCE)
-            ..setUint32(1, length, Endian.big);
+      bytes = ByteData(5 + length)
+        ..setUint8(0, 0xCE)
+        ..setUint32(1, length, Endian.big);
 
       for (var i = 0; i < length; i++) {
         bytes.setUint8(5 + i, value[i]);

@@ -46,10 +46,9 @@ final class PsDictionary
     // Any non-PsString keys should be handled by the fromDictionary helper method
     for (final entry in values.entries) {
       final key = entry.key as PsString;
-      final value =
-          entry.value is PsDataType
-              ? entry.value as PsDataType
-              : PsDataType.fromValue(entry.value);
+      final value = entry.value is PsDataType
+          ? entry.value as PsDataType
+          : PsDataType.fromValue(entry.value);
 
       _values[key] = value;
     }
