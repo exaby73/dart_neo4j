@@ -1,3 +1,7 @@
+## 1.1.0+1
+
+- Refactored `CypherElementId` and `CypherId` to use const factories
+
 ## 1.1.0
 
 ### Notes
