@@ -25,11 +25,10 @@ sealed class CypherElementId {
   const CypherElementId._();
 
   /// Creates a CypherElementId with no value (for new nodes before CREATE).
-  factory CypherElementId.none() => const _CypherNoElementId();
+  const factory CypherElementId.none() = _CypherNoElementId;
 
   /// Creates a CypherElementId with a specific value (for existing nodes from Neo4j).
-  factory CypherElementId.value(String elementId) =>
-      _CypherElementIdValue(elementId);
+  const factory CypherElementId.value(String elementId) = _CypherElementIdValue;
 
   /// Gets the element ID value or throws if no element ID is set.
   ///
