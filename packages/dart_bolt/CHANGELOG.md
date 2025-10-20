@@ -1,3 +1,7 @@
+## 1.1.0
+
+- Version bump for consistency with dart_neo4j ecosystem
+
 ## 1.0.0
 
 ### Stable Release

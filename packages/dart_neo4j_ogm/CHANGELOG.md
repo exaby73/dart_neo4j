@@ -1,3 +1,13 @@
+## 1.1.0
+
+### Notes
+
+- Version bump for compatibility with dart_neo4j_ogm_generator 1.1.0
+- No changes to annotations or API
+- Generated code from dart_neo4j_ogm_generator 1.1.0 includes breaking changes:
+  - `nodeLabel` is now static const (access via `ClassNameCypher.nodeLabel`)
+  - `cypherPropertyNames` is now a static const Record type
+
 ## 1.0.0
 
 ### BREAKING CHANGES

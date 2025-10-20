@@ -28,14 +28,19 @@ extension ProductCypher on Product {
   /// Returns complete Cypher node syntax with variable name, label, and properties.
   /// Example: `user.toCypherWithPlaceholders('u')` returns `'(u:User {id: $id, name: $name})'`
   String toCypherWithPlaceholders(String variableName) {
-    return '($variableName:$nodeLabel $cypherProperties)';
+    return '($variableName:${nodeLabel} $cypherProperties)';
   }
 
-  /// Returns the Neo4j node label for this Product.
-  String get nodeLabel => 'Product';
+  /// The Neo4j node label for this Product.
+  static const String nodeLabel = 'Product';
 
-  /// Returns the list of property names used in Cypher queries.
-  List<String> get cypherPropertyNames => ['productName', 'price'];
+  /// Record of property names used in Cypher queries.
+  /// Each field name corresponds to the Dart property name, with the Cypher property name as its value.
+  static const ({String name, String price}) cypherPropertyNames = (
+    name: 'productName',
+
+    price: 'price',
+  );
 
   /// Returns Cypher node properties syntax string with prefixed parameter placeholders.
   /// This helps avoid parameter name collisions in complex queries.
@@ -64,6 +69,6 @@ extension ProductCypher on Product {
     String variableName,
     String prefix,
   ) {
-    return '($variableName:$nodeLabel ${cypherPropertiesWithPrefix(prefix)})';
+    return '($variableName:${nodeLabel} ${cypherPropertiesWithPrefix(prefix)})';
   }
 }

@@ -1,3 +1,44 @@
+## 1.1.0
+
+### BREAKING CHANGES
+
+- **Static nodeLabel**: `nodeLabel` is now a static const field instead of an instance getter
+  - Access via `UserCypher.nodeLabel` instead of `user.nodeLabel`
+  - Can be accessed without creating an instance
+  - String interpolation in generated methods uses `${nodeLabel}` to reference the static member
+- **Record-based cypherPropertyNames**: `cypherPropertyNames` is now a static const Record instead of a getter returning `List<String>`
+  - Access via `UserCypher.cypherPropertyNames.fieldName` instead of iterating a list
+  - Field names in the record correspond to Dart property names
+  - Field values are the Cypher property names
+  - Provides type-safe access to property name mappings
+  - Example: For a `User` class with `name` and `email` fields:
+    ```dart
+    // Old: List<String> get cypherPropertyNames => ['name', 'email'];
+    // New: static const ({String name, String email}) cypherPropertyNames = (name: 'name', email: 'email');
+    ```
+
+### Improvements
+
+- **Better Type Safety**: Record-based property names provide compile-time checking
+- **Static Access**: Both `nodeLabel` and `cypherPropertyNames` can now be accessed without instances
+- **Improved Performance**: Static const values are more efficient than getters
+
+### Migration Guide
+
+Update code that accesses `nodeLabel` or `cypherPropertyNames`:
+
+```dart
+// Before
+final user = User(id: CypherId.value(1), name: 'John', email: 'john@example.com');
+print(user.nodeLabel);  // 'User'
+print(user.cypherPropertyNames);  // ['name', 'email']
+
+// After
+print(UserCypher.nodeLabel);  // 'User'
+print(UserCypher.cypherPropertyNames.name);  // 'name'
+print(UserCypher.cypherPropertyNames.email);  // 'email'
+```
+
 ## 1.0.0
 
 ### BREAKING CHANGES

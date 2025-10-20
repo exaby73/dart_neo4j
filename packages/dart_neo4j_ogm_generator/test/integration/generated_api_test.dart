@@ -30,23 +30,12 @@ void main() {
       });
 
       test('nodeLabel returns correct label', () {
-        final user = User(
-          id: CypherId.value(1),
-          name: 'John',
-          email: 'john@example.com',
-        );
-
-        expect(user.nodeLabel, equals('User'));
+        expect(UserCypher.nodeLabel, equals('User'));
       });
 
-      test('cypherPropertyNames returns correct list', () {
-        final user = User(
-          id: CypherId.value(1),
-          name: 'John',
-          email: 'john@example.com',
-        );
-
-        expect(user.cypherPropertyNames, equals(['name', 'email']));
+      test('cypherPropertyNames returns correct record', () {
+        expect(UserCypher.cypherPropertyNames.name, equals('name'));
+        expect(UserCypher.cypherPropertyNames.email, equals('email'));
       });
 
       test('cypherProperties returns correct Cypher syntax', () {
@@ -177,9 +166,7 @@ void main() {
 
     group('Customer class (with custom label)', () {
       test('nodeLabel returns custom label', () {
-        final customer = Customer(id: CypherId.value(1), name: 'Jane');
-
-        expect(customer.nodeLabel, equals('Person'));
+        expect(CustomerCypher.nodeLabel, equals('Person'));
       });
 
       test('cypherParameters returns correct map', () {
@@ -240,15 +227,10 @@ void main() {
       );
 
       test('cypherPropertyNames excludes ignored fields', () {
-        final product = Product(
-          id: CypherId.value(1),
-          name: 'Widget',
-          internalCode: 'INTERNAL123',
-          price: 9.99,
-        );
-
-        expect(product.cypherPropertyNames, equals(['productName', 'price']));
-        expect(product.cypherPropertyNames.contains('internalCode'), isFalse);
+        // Test that cypherPropertyNames is a record with correct Dart field names as keys
+        // and Cypher property names as values
+        expect(ProductCypher.cypherPropertyNames.name, equals('productName'));
+        expect(ProductCypher.cypherPropertyNames.price, equals('price'));
       });
 
       test(
@@ -559,7 +541,9 @@ void main() {
           'userAge': 35, // Custom name from @CypherProperty
         });
 
-        expect(user.cypherPropertyNames, equals(['name', 'email', 'userAge']));
+        expect(JsonUserCypher.cypherPropertyNames.name, equals('name'));
+        expect(JsonUserCypher.cypherPropertyNames.email, equals('email'));
+        expect(JsonUserCypher.cypherPropertyNames.age, equals('userAge'));
         expect(
           user.cypherProperties,
           equals('{name: \$name, email: \$email, userAge: \$userAge}'),

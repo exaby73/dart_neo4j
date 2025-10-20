@@ -26,14 +26,15 @@ extension CustomerCypher on Customer {
   /// Returns complete Cypher node syntax with variable name, label, and properties.
   /// Example: `user.toCypherWithPlaceholders('u')` returns `'(u:User {id: $id, name: $name})'`
   String toCypherWithPlaceholders(String variableName) {
-    return '($variableName:$nodeLabel $cypherProperties)';
+    return '($variableName:${nodeLabel} $cypherProperties)';
   }
 
-  /// Returns the Neo4j node label for this Customer.
-  String get nodeLabel => 'Person';
+  /// The Neo4j node label for this Customer.
+  static const String nodeLabel = 'Person';
 
-  /// Returns the list of property names used in Cypher queries.
-  List<String> get cypherPropertyNames => ['name'];
+  /// Record of property names used in Cypher queries.
+  /// Each field name corresponds to the Dart property name, with the Cypher property name as its value.
+  static const ({String name}) cypherPropertyNames = (name: 'name');
 
   /// Returns Cypher node properties syntax string with prefixed parameter placeholders.
   /// This helps avoid parameter name collisions in complex queries.
@@ -60,7 +61,7 @@ extension CustomerCypher on Customer {
     String variableName,
     String prefix,
   ) {
-    return '($variableName:$nodeLabel ${cypherPropertiesWithPrefix(prefix)})';
+    return '($variableName:${nodeLabel} ${cypherPropertiesWithPrefix(prefix)})';
   }
 }
 

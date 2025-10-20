@@ -6,6 +6,20 @@ catalog:
     sdk: ^3.8.0
 
 scripts:
+  prebuild:
+    command: dart run build_runner clean
+    runInPackages:
+      - packages/dart_neo4j_ogm_generator
+  build:
+    command: dart run build_runner build -d
+    runInPackages:
+      - packages/dart_neo4j_ogm_generator
+  watch:
+    runHooksFrom: build
+    command: dart run build_runner watch -d
+    runInPackages:
+      - packages/dart_neo4j_ogm_generator
+
   analyze:
     command: dart analyze
     runInPackages:

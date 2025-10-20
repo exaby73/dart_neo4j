@@ -30,14 +30,21 @@ extension FreezedUserCypher on FreezedUser {
   /// Returns complete Cypher node syntax with variable name, label, and properties.
   /// Example: `user.toCypherWithPlaceholders('u')` returns `'(u:User {id: $id, name: $name})'`
   String toCypherWithPlaceholders(String variableName) {
-    return '($variableName:$nodeLabel $cypherProperties)';
+    return '($variableName:${nodeLabel} $cypherProperties)';
   }
 
-  /// Returns the Neo4j node label for this FreezedUser.
-  String get nodeLabel => 'FreezedUser';
+  /// The Neo4j node label for this FreezedUser.
+  static const String nodeLabel = 'FreezedUser';
 
-  /// Returns the list of property names used in Cypher queries.
-  List<String> get cypherPropertyNames => ['name', 'emailAddress', 'bio'];
+  /// Record of property names used in Cypher queries.
+  /// Each field name corresponds to the Dart property name, with the Cypher property name as its value.
+  static const ({String name, String email, String bio}) cypherPropertyNames = (
+    name: 'name',
+
+    email: 'emailAddress',
+
+    bio: 'bio',
+  );
 
   /// Returns Cypher node properties syntax string with prefixed parameter placeholders.
   /// This helps avoid parameter name collisions in complex queries.
@@ -74,6 +81,6 @@ extension FreezedUserCypher on FreezedUser {
     String variableName,
     String prefix,
   ) {
-    return '($variableName:$nodeLabel ${cypherPropertiesWithPrefix(prefix)})';
+    return '($variableName:${nodeLabel} ${cypherPropertiesWithPrefix(prefix)})';
   }
 }
