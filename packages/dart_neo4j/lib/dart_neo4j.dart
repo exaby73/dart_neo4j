@@ -78,7 +78,7 @@ export 'src/session/transaction.dart';
 export 'src/connection/connection_pool.dart';
 
 // Results and types
-export 'src/result/result.dart';
+export 'src/result/result.dart' hide ResultPrivateImpl;
 export 'src/result/record.dart';
 export 'src/result/summary.dart';
 export 'src/types/neo4j_types.dart';

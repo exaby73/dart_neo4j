@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:dart_neo4j/src/exceptions/neo4j_exception.dart';
 import 'package:dart_neo4j/src/result/record.dart';
 import 'package:dart_neo4j/src/result/summary.dart';
@@ -38,6 +39,9 @@ class Result {
 
   /// Whether this result has been consumed.
   bool get isConsumed => _isConsumed;
+
+  /// Future that completes when the query has finished executing.
+  Future<void> get done => _summaryCompleter.future;
 
   /// Stream of records from this result.
   ///
@@ -104,6 +108,14 @@ class Result {
     return summary();
   }
 
+  @override
+  String toString() {
+    return 'Result{keys: $keys, consumed: $_isConsumed}';
+  }
+}
+
+/// [Result] methods for internal use only.
+extension ResultPrivateImpl on Result {
   /// Adds a record to this result (internal use only).
   void addRecord(Record record) {
     if (!_recordController.isClosed) {
@@ -136,96 +148,5 @@ class Result {
     if (!_summaryCompleter.isCompleted) {
       _summaryCompleter.completeError(error, stackTrace);
     }
-  }
-
-  @override
-  String toString() {
-    return 'Result{keys: $keys, consumed: $_isConsumed}';
-  }
-}
-
-/// A completed result that contains all records in memory.
-class CompletedResult {
-  final List<String> _keys;
-  final List<Record> _records;
-  final ResultSummary _summary;
-
-  /// Creates a new completed result.
-  const CompletedResult._(this._keys, this._records, this._summary);
-
-  /// Creates a completed result from a list of records and summary.
-  factory CompletedResult.fromRecords(
-    List<String> keys,
-    List<Record> records,
-    ResultSummary summary,
-  ) {
-    return CompletedResult._(keys, records, summary);
-  }
-
-  /// The keys (column names) for this result.
-  List<String> get keys => List.unmodifiable(_keys);
-
-  /// All records in this result.
-  List<Record> get records => List.unmodifiable(_records);
-
-  /// The summary for this result.
-  ResultSummary get summary => _summary;
-
-  /// The number of records in this result.
-  int get length => _records.length;
-
-  /// Whether this result is empty.
-  bool get isEmpty => _records.isEmpty;
-
-  /// Whether this result is not empty.
-  bool get isNotEmpty => _records.isNotEmpty;
-
-  /// Gets the record at the given index.
-  Record operator [](int index) {
-    return _records[index];
-  }
-
-  /// Returns the single record from this result.
-  ///
-  /// Throws [ClientException] if the result contains zero or more than one record.
-  Record single() {
-    if (_records.isEmpty) {
-      throw ClientException('Expected single record but result was empty');
-    }
-    if (_records.length > 1) {
-      throw ClientException(
-        'Expected single record but got ${_records.length} records',
-      );
-    }
-    return _records.first;
-  }
-
-  /// Returns the first record from this result, or null if empty.
-  Record? firstOrNull() {
-    return _records.isNotEmpty ? _records.first : null;
-  }
-
-  /// Returns the last record from this result, or null if empty.
-  Record? lastOrNull() {
-    return _records.isNotEmpty ? _records.last : null;
-  }
-
-  @override
-  String toString() {
-    return 'CompletedResult{keys: $keys, records: ${_records.length}, summary: $summary}';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is CompletedResult &&
-        other._keys.length == _keys.length &&
-        other._records.length == _records.length &&
-        other.summary == summary;
-  }
-
-  @override
-  int get hashCode {
-    return Object.hash(_keys.length, _records.length, summary);
   }
 }

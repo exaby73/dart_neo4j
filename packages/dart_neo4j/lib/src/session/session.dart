@@ -66,7 +66,23 @@ abstract class Session {
   /// The last bookmarks from this session.
   List<String> get lastBookmarks;
 
-  /// Executes a Cypher query in an auto-commit transaction.
+  /// Starts executing a Cypher query in an auto-commit transaction and returns
+  /// [Result] early so clients can start streaming records immediately.
+  /// [Result.done] and [Result.summary()] will complete when the query has
+  /// finished executing.
+  ///
+  /// [cypher] - the Cypher query to execute
+  /// [parameters] - parameters for the query (default: empty)
+  ///
+  /// Throws [SessionExpiredException] if the session is closed.
+  /// Throws [DatabaseException] if the query fails.
+  Future<Result> startQuery(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]);
+
+  /// Executes a Cypher query in an auto-commit transaction and wait for the
+  /// query to complete with all results.
   ///
   /// [cypher] - the Cypher query to execute
   /// [parameters] - parameters for the query (default: empty)

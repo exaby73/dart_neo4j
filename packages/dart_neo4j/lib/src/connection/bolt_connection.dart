@@ -19,15 +19,12 @@ class BoltConnection {
   late final BoltProtocol _protocol;
 
   BoltServerState _serverState = BoltServerState.disconnected;
-  final Map<int, Completer<BoltMessage>> _pendingRequests = {};
-  int _nextRequestId = 1;
+  final List<Completer<BoltMessage>> _pendingRequests = [];
 
   // Streaming result tracking
   Result? _currentStreamingResult;
   List<String>? _currentStreamingKeys;
 
-  final StreamController<BoltMessage> _messageController =
-      StreamController<BoltMessage>.broadcast();
   StreamSubscription<Uint8List>? _dataSubscription;
 
   /// Creates a new Bolt connection.
@@ -299,8 +296,13 @@ class BoltConnection {
     }
   }
 
-  /// Runs a Cypher query and returns the result.
-  Future<Result> run(
+  /// Runs a Cypher query and returns the result immediately.
+  ///
+  /// This method returns before the `PULL` operation is complete. It means
+  /// [Result] can be used for streaming records immediately, but the query
+  /// is still executing until [Result.done] completes. In the meantime, the
+  /// connection is busy and cannot accept new requests.
+  Future<Result> startQuery(
     String cypher, [
     Map<String, dynamic> parameters = const {},
     Duration? timeout,
@@ -411,7 +413,7 @@ class BoltConnection {
           if (ex is ConnectionTimeoutException) {
             result.completeWithError(
               Exception(
-                'The PULL operation has been cancelled after ${timeout}.',
+                'The PULL operation has been cancelled after $timeout.',
               ),
               st,
             );
@@ -430,14 +432,26 @@ class BoltConnection {
     }
   }
 
+  /// Runs a Cypher query and returns the result.
+  ///
+  /// This method returns after the query has finished executing.
+  Future<Result> run(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+    Duration? timeout,
+  ]) async {
+    final result = await startQuery(cypher, parameters, timeout);
+    await result.done;
+    return result;
+  }
+
   /// Sends a message and waits for a response.
   Future<BoltMessage> _sendMessage(
     BoltMessage message, [
     Duration? timeout,
   ]) async {
-    final requestId = _nextRequestId++;
     final completer = Completer<BoltMessage>();
-    _pendingRequests[requestId] = completer;
+    _pendingRequests.add(completer);
 
     if (_currentStreamingResult != null) {
       throw ProtocolException(
@@ -452,7 +466,7 @@ class BoltConnection {
       return await completer.future.timeout(
         timeout,
         onTimeout: () {
-          _pendingRequests.remove(requestId);
+          _pendingRequests.remove(completer);
           throw ConnectionTimeoutException(
             'Message timeout: no response received',
             timeout,
@@ -460,7 +474,7 @@ class BoltConnection {
         },
       );
     } catch (e) {
-      _pendingRequests.remove(requestId);
+      _pendingRequests.remove(completer);
       rethrow;
     }
   }
@@ -490,15 +504,12 @@ class BoltConnection {
       }
 
       // Don't complete requests yet - wait for summary message
-      if (!_messageController.isClosed) {
-        _messageController.add(message);
-      }
     } else if (message is BoltSuccessMessage ||
         message is BoltFailureMessage ||
         message is BoltIgnoredMessage) {
       // Summary messages complete the current request
       if (_pendingRequests.isNotEmpty) {
-        final completer = _pendingRequests.values.first;
+        final completer = _pendingRequests.first;
         _pendingRequests.clear();
         completer.complete(message);
       }
@@ -506,20 +517,12 @@ class BoltConnection {
       // Clear streaming state
       _currentStreamingResult = null;
       _currentStreamingKeys = null;
-
-      if (!_messageController.isClosed) {
-        _messageController.add(message);
-      }
     } else {
       // Other messages complete requests immediately
       if (_pendingRequests.isNotEmpty) {
-        final completer = _pendingRequests.values.first;
+        final completer = _pendingRequests.first;
         _pendingRequests.clear();
         completer.complete(message);
-      }
-
-      if (!_messageController.isClosed) {
-        _messageController.add(message);
       }
     }
   }
@@ -529,16 +532,12 @@ class BoltConnection {
     _serverState = BoltServerState.defunct;
 
     // Complete all pending requests with error
-    for (final completer in _pendingRequests.values) {
+    for (final completer in _pendingRequests) {
       if (!completer.isCompleted) {
         completer.completeError(error, stackTrace);
       }
     }
     _pendingRequests.clear();
-
-    if (!_messageController.isClosed) {
-      _messageController.addError(error, stackTrace);
-    }
   }
 
   /// Handles connection close events.
@@ -616,16 +615,12 @@ class BoltConnection {
     await _socket.close();
 
     // Complete pending requests with error
-    for (final completer in _pendingRequests.values) {
+    for (final completer in _pendingRequests) {
       if (!completer.isCompleted) {
         completer.completeError(const ConnectionException('Connection closed'));
       }
     }
     _pendingRequests.clear();
-
-    if (!_messageController.isClosed) {
-      await _messageController.close();
-    }
   }
 
   @override

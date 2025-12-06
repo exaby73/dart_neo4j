@@ -28,6 +28,42 @@ class SessionImpl implements Session {
   List<String> get lastBookmarks => List.unmodifiable(_lastBookmarks);
 
   @override
+  Future<Result> startQuery(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) async {
+    if (_closed) {
+      throw const SessionExpiredException('Session has been closed');
+    }
+
+    PooledConnection? pooledConnection;
+    try {
+      // Acquire connection from pool
+      pooledConnection = await _connectionPool.acquire();
+
+      // Execute query
+      final result = await pooledConnection.connection.startQuery(
+        cypher,
+        parameters,
+        config.timeout,
+      );
+
+      // Release connection back to pool when result has completed.
+      result.done.whenComplete(() {
+        _connectionPool.release(pooledConnection!);
+      });
+
+      return result;
+    } catch (e) {
+      // Release connection on error
+      if (pooledConnection != null) {
+        _connectionPool.release(pooledConnection);
+      }
+      rethrow;
+    }
+  }
+
+  @override
   Future<Result> run(
     String cypher, [
     Map<String, dynamic> parameters = const {},

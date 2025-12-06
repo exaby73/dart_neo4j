@@ -30,6 +30,37 @@ abstract class TransactionImpl implements Transaction {
   bool get isMarkedForRollback => _state == TransactionState.markedForRollback;
 
   @override
+  Future<Result> startQuery(
+    String cypher, [
+    Map<String, dynamic> parameters = const {},
+  ]) async {
+    if (isClosed) {
+      throw const TransactionClosedException('Transaction is closed');
+    }
+    if (isMarkedForRollback) {
+      throw const TransactionClosedException(
+        'Transaction is marked for rollback',
+      );
+    }
+
+    try {
+      final result = await _pooledConnection.connection.run(
+        cypher,
+        parameters,
+        config?.timeout,
+      );
+      result.done.catchError((e) {
+        _state = TransactionState.markedForRollback;
+        throw e;
+      });
+      return result;
+    } catch (e) {
+      _state = TransactionState.markedForRollback;
+      rethrow;
+    }
+  }
+
+  @override
   Future<Result> run(
     String cypher, [
     Map<String, dynamic> parameters = const {},
