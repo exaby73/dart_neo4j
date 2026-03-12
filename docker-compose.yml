@@ -151,7 +151,6 @@ services:
     networks:
       - neo4j-network
 
-
 volumes:
   neo4j-single-data:
   neo4j-single-logs:

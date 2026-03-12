@@ -1,6 +1,6 @@
 name: dart_neo4j_ogm_generator
 description: Code generator for dart_neo4j_ogm annotations. Generates Cypher query construction methods for Neo4j OGM.
-version: 1.2.1
+version: 1.2.2
 resolution: workspace
 repository: https://github.com/exaby73/dart_neo4j/tree/main/packages/dart_neo4j_ogm_generator
 
@@ -19,7 +19,7 @@ dependencies:
   analyzer: ^8.0.0 # Configured via catalog
 
   # Annotation package
-  dart_neo4j_ogm: ^1.2.1 # Configured via catalog
+  dart_neo4j_ogm: ^1.2.2 # Configured via catalog
 
 dev_dependencies:
   # Testing
@@ -27,8 +27,8 @@ dev_dependencies:
   build_test: ^3.0.0
 
   # Neo4j driver and bolt for integration tests
-  dart_neo4j: ^1.2.1 # Configured via catalog
-  dart_bolt: ^1.2.1 # Configured via catalog
+  dart_neo4j: ^1.2.2 # Configured via catalog
+  dart_bolt: ^1.2.2 # Configured via catalog
 
   # Freezed for testing compatibility
   freezed: ^3.2.0

@@ -1,3 +1,11 @@
+## 1.2.2
+
+#### Support old authentication flow with Neo4j version < 5.1
+
+- Refactor authentication flow to support authentication with a single `HELLO` message (protocol versions < 5.1), and keep the existing `HELLO`/`LOGON` flow for newer versions. For more information, see https://neo4j.com/docs/bolt/current/bolt/server-state/#_version_5_1.
+- Added optional `forcedVersions` arguments to enable forcing a connection into using a specific version (vs. the built-in versions officially supported by the driver -- see `bolt_protocol.dart` in `package:dart_bolt`). This enables integration testing, e.g. forcing a connection to use version 4.4 with a Neo4j 2025 instance.
+- Added connectivity tests for protocol versions 4.4, 5.0 and 5.1.
+
 ## 1.2.1
 
 #### Allow for running long running queries (#4)

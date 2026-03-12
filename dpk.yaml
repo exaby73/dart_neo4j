@@ -8,11 +8,11 @@ catalog:
     sdk: ^3.8.0
 
   dependencies:
-    dart_bolt: ^1.2.1
-    dart_neo4j: ^1.2.1
-    dart_neo4j_ogm: ^1.2.1
-    dart_neo4j_ogm_generator: ^1.2.1
-    dart_packstream: ^1.2.1
+    dart_bolt: ^1.2.2
+    dart_neo4j: ^1.2.2
+    dart_neo4j_ogm: ^1.2.2
+    dart_neo4j_ogm_generator: ^1.2.2
+    dart_packstream: ^1.2.2
 
     analyzer: ^8.0.0
     build: ^4.0.0

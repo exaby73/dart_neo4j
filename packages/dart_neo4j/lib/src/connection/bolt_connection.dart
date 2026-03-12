@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dart_bolt/dart_bolt.dart';
+import 'package:dart_neo4j/dart_neo4j_version.dart';
 import 'package:dart_neo4j/src/auth/auth_token.dart';
 import 'package:dart_neo4j/src/auth/basic_auth.dart';
 import 'package:dart_neo4j/src/driver/uri_parser.dart';
@@ -64,7 +65,7 @@ class BoltConnection {
   /// Establishes and initializes the Bolt connection.
   ///
   /// This performs the full Bolt handshake and authentication.
-  Future<void> connect() async {
+  Future<void> connect([List<BoltVersion>? forcedVersions]) async {
     if (_serverState != BoltServerState.disconnected &&
         _serverState != BoltServerState.defunct) {
       throw ConnectionException(
@@ -82,7 +83,7 @@ class BoltConnection {
       await _socket.connect();
 
       // Perform Bolt handshake (before setting up message processing)
-      await _protocol.performHandshake();
+      await _protocol.performHandshake(forcedVersions);
 
       // Set up data processing for chunked messages
       _dataSubscription = _socket.dataStream.listen(
@@ -102,15 +103,77 @@ class BoltConnection {
     }
   }
 
+  Future<void> _authenticate() {
+    final version = BoltVersion.raw(protocolVersion!);
+    return (version < BoltVersion.v5_1)
+        ? _authenticateWithoutLogon()
+        : _authenticateWithLogon();
+  }
+
+  /// Authenticates with the Neo4j server using HELLO flow.
+  Future<void> _authenticateWithoutLogon() async {
+    // Step 1: Send HELLO message (with authentication for older protocols)
+    _serverState = BoltServerState.authentication;
+
+    final helloMessage = switch (_auth) {
+      BasicAuth auth => BoltMessageFactory.helloWithAuth(
+        userAgent: 'dart_neo4j/$version',
+        username: auth.username,
+        password: auth.password,
+        boltAgent: {
+          'product': 'dart_neo4j/$version',
+          'platform': 'Dart',
+          'language': 'Dart',
+        },
+      ),
+      NoAuth() => BoltMessageFactory.hello(
+        userAgent: 'dart_neo4j/$version',
+        boltAgent: {
+          'product': 'dart_neo4j/$version',
+          'platform': 'Dart',
+          'language': 'Dart',
+        },
+      ),
+      _ => throw ProtocolException(
+        'Unsupported AuthToken ${_auth.runtimeType}',
+      ),
+    };
+
+    final helloResponse = await _sendMessage(helloMessage);
+
+    if (helloResponse is! BoltSuccessMessage) {
+      if (helloResponse is BoltFailureMessage) {
+        _serverState = BoltServerState.failed;
+        final metadata =
+            helloResponse.metadata.dartValue as Map<String, dynamic>? ??
+            const {};
+        final code = metadata['code'] as String? ?? 'unknown';
+        final message =
+            metadata['message'] as String? ?? 'Authentication failed';
+        throw _isAuthError(code, message)
+            ? AuthenticationException(message)
+            : DatabaseException(message, code);
+      } else {
+        throw ProtocolException(
+          'Unexpected response to HELLO: ${helloResponse.runtimeType}',
+        );
+      }
+    }
+
+    // Authentication successful - server is now in READY state
+    _serverState = BoltServerState.ready;
+    return;
+  }
+
   /// Authenticates with the Neo4j server using HELLO/LOGON flow.
-  Future<void> _authenticate() async {
+  Future<void> _authenticateWithLogon() async {
     // Step 1: Send HELLO message (without authentication for newer protocols)
     _serverState = BoltServerState.authentication;
 
     final helloMessage = BoltMessageFactory.hello(
-      userAgent: 'dart_neo4j/1.0.0',
+      userAgent: 'dart_neo4j/$version',
       boltAgent: {
-        'product': 'dart_neo4j/1.0.0',
+        'product': 'dart_neo4j/$version',
         'platform': 'Dart',
         'language': 'Dart',
       },
@@ -122,7 +185,8 @@ class BoltConnection {
       if (helloResponse is BoltFailureMessage) {
         _serverState = BoltServerState.failed;
         final metadata =
-            helloResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+            helloResponse.metadata.dartValue as Map<String, dynamic>? ??
+            const {};
         final code = metadata['code'] as String? ?? 'unknown';
         final message = metadata['message'] as String? ?? 'HELLO failed';
         throw DatabaseException(message, code);
@@ -144,20 +208,25 @@ class BoltConnection {
     } else if (logonResponse is BoltFailureMessage) {
       _serverState = BoltServerState.failed;
       final metadata =
-          logonResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+          logonResponse.metadata.dartValue as Map<String, dynamic>? ?? const {};
       final code = metadata['code'] as String? ?? 'unknown';
       final message = metadata['message'] as String? ?? 'Authentication failed';
-
-      if (code.startsWith('Neo.ClientError.Security.Unauthorized')) {
-        throw AuthenticationException(message);
-      } else {
-        throw DatabaseException(message, code);
-      }
+      throw _isAuthError(code, message)
+          ? AuthenticationException(message)
+          : DatabaseException(message, code);
     } else {
       throw ProtocolException(
         'Unexpected response to LOGON: ${logonResponse.runtimeType}',
       );
     }
+  }
+
+  static bool _isAuthError(String code, String message) {
+    code = code.toLowerCase();
+    if (code.startsWith('neo.clienterror.security.unauthorized')) return true;
+    message = message.toLowerCase();
+    return message.contains('unauthorized') ||
+        message.contains('authentication fail');
   }
 
   /// Creates a LOGON message based on the authentication token type.
@@ -197,9 +266,9 @@ class BoltConnection {
 
     try {
       final beginMessage = BoltMessageFactory.begin(
-        bookmarks: bookmarks ?? [],
+        bookmarks: bookmarks ?? const [],
         txTimeout: txTimeout,
-        txMetadata: txMetadata ?? {},
+        txMetadata: txMetadata ?? const {},
         mode: mode,
         db: db,
       );
@@ -213,7 +282,8 @@ class BoltConnection {
         // BEGIN failed - server transitions to FAILED state
         _serverState = BoltServerState.failed;
         final metadata =
-            beginResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+            beginResponse.metadata.dartValue as Map<String, dynamic>? ??
+            const {};
         final code = metadata['code'] as String? ?? 'unknown';
         final message =
             metadata['message'] as String? ?? 'Transaction begin failed';
@@ -247,7 +317,8 @@ class BoltConnection {
         // COMMIT failed - server transitions to FAILED state
         _serverState = BoltServerState.failed;
         final metadata =
-            commitResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+            commitResponse.metadata.dartValue as Map<String, dynamic>? ??
+            const {};
         final code = metadata['code'] as String? ?? 'unknown';
         final message =
             metadata['message'] as String? ?? 'Transaction commit failed';
@@ -281,7 +352,8 @@ class BoltConnection {
         // ROLLBACK failed - server transitions to FAILED state
         _serverState = BoltServerState.failed;
         final metadata =
-            rollbackResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+            rollbackResponse.metadata.dartValue as Map<String, dynamic>? ??
+            const {};
         final code = metadata['code'] as String? ?? 'unknown';
         final message =
             metadata['message'] as String? ?? 'Transaction rollback failed';
@@ -343,14 +415,15 @@ class BoltConnection {
           _serverState = BoltServerState.streaming;
         }
         final metadata =
-            runResponse.metadata?.dartValue as Map<String, dynamic>? ?? {};
-        final fieldsData = metadata['fields'] as List<dynamic>? ?? [];
+            runResponse.metadata?.dartValue as Map<String, dynamic>? ??
+            const {};
+        final fieldsData = metadata['fields'] as List<dynamic>? ?? const [];
         keys = fieldsData.cast<String>();
       } else if (runResponse is BoltFailureMessage) {
         // RUN failed - server transitions to FAILED state
         _serverState = BoltServerState.failed;
         final metadata =
-            runResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+            runResponse.metadata.dartValue as Map<String, dynamic>? ?? const {};
         final code = metadata['code'] as String? ?? 'unknown';
         final message =
             metadata['message'] as String? ?? 'Query execution failed';
@@ -388,7 +461,8 @@ class BoltConnection {
             // PULL failed - server transitions to FAILED state
             _serverState = BoltServerState.failed;
             final metadata =
-                pullResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+                pullResponse.metadata.dartValue as Map<String, dynamic>? ??
+                const {};
             final code = metadata['code'] as String? ?? 'unknown';
             final message =
                 metadata['message'] as String? ?? 'Result fetch failed';
@@ -580,7 +654,8 @@ class BoltConnection {
         // RESET failed - connection is likely defunct
         _serverState = BoltServerState.defunct;
         final metadata =
-            resetResponse.metadata.dartValue as Map<String, dynamic>? ?? {};
+            resetResponse.metadata.dartValue as Map<String, dynamic>? ??
+            const {};
         final code = metadata['code'] as String? ?? 'unknown';
         final message = metadata['message'] as String? ?? 'Reset failed';
         throw ConnectionException(
@@ -603,7 +678,8 @@ class BoltConnection {
     String query,
     Map<String, dynamic> parameters,
   ) {
-    final metadata = message.metadata?.dartValue as Map<String, dynamic>? ?? {};
+    final metadata =
+        message.metadata?.dartValue as Map<String, dynamic>? ?? const {};
     return ResultSummary.fromMetadata(query, parameters, metadata);
   }
 
@@ -624,7 +700,8 @@ class BoltConnection {
   }
 
   @override
-  String toString() {
-    return 'BoltConnection{uri: ${_uri.host}:${_uri.port}, serverState: $_serverState, version: $protocolVersion}';
-  }
+  String toString() =>
+      'BoltConnection{uri: ${_uri.host}:${_uri.port},'
+      ' serverState: $_serverState,'
+      ' version: ${protocolVersion?.toRadixString(16)}}';
 }

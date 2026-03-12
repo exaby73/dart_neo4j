@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:dart_bolt/dart_bolt.dart' as bolt;
+import 'package:dart_bolt/dart_bolt.dart' show BoltVersion;
 import 'package:dart_neo4j/src/auth/auth_token.dart';
 import 'package:dart_neo4j/src/connection/bolt_connection.dart';
 import 'package:dart_neo4j/src/driver/uri_parser.dart';
@@ -131,13 +132,13 @@ class ConnectionPool {
   ///
   /// Throws [ServiceUnavailableException] if the pool is closed.
   /// Throws [ConnectionTimeoutException] if no connection becomes available within the timeout.
-  Future<PooledConnection> acquire() async {
+  Future<PooledConnection> acquire([List<BoltVersion>? forcedVersions]) async {
     if (_closed) {
       throw const ServiceUnavailableException('Connection pool is closed');
     }
 
     // Try to get an available connection
-    PooledConnection? connection = _getAvailableConnection();
+    PooledConnection? connection = _getAvailableConnection(forcedVersions);
     if (connection != null) {
       connection.markInUse();
       return connection;
@@ -146,7 +147,7 @@ class ConnectionPool {
     // Try to create a new connection if under capacity
     if (_allConnections.length < _config.maxSize) {
       try {
-        connection = await _createConnection();
+        connection = await _createConnection(forcedVersions);
         connection.markInUse();
         return connection;
       } catch (e) {
@@ -240,36 +241,58 @@ class ConnectionPool {
   }
 
   /// Gets an available connection from the pool.
-  PooledConnection? _getAvailableConnection() {
-    while (_availableConnections.isNotEmpty) {
-      final connection = _availableConnections.removeFirst();
+  PooledConnection? _getAvailableConnection([
+    List<BoltVersion>? forcedVersions,
+  ]) {
+    final uneligible = <PooledConnection>[];
+    try {
+      while (_availableConnections.isNotEmpty) {
+        final connection = _availableConnections.removeFirst();
 
-      if (connection.connection.isClosed) {
-        _removeConnection(connection);
-        continue;
-      }
-
-      // Check if connection is in FAILED state and try to reset it
-      if (connection.connection.serverState == bolt.BoltServerState.failed) {
-        // Try to reset the connection to make it usable again
-        try {
-          // We can't await here, so we'll remove failed connections and let a new one be created
-          _removeConnection(connection);
-          continue;
-        } catch (e) {
-          // If reset fails, remove the connection
+        if (connection.connection.isClosed) {
           _removeConnection(connection);
           continue;
         }
-      }
 
-      return connection;
+        // Check if connection is in FAILED state and try to reset it
+        if (connection.connection.serverState == bolt.BoltServerState.failed) {
+          // Try to reset the connection to make it usable again
+          try {
+            // We can't await here, so we'll remove failed connections and let a new one be created
+            _removeConnection(connection);
+            continue;
+          } catch (e) {
+            // If reset fails, remove the connection
+            _removeConnection(connection);
+            continue;
+          }
+        }
+
+        // check forced version match
+        if (forcedVersions == null || forcedVersions.isEmpty) {
+          return connection;
+        } else {
+          final version = BoltVersion.raw(
+            connection.connection.protocolVersion ?? 0,
+          );
+          if (forcedVersions.contains(version)) {
+            return connection;
+          } else {
+            uneligible.add(connection);
+          }
+        }
+      }
+      return null;
+    } finally {
+      // return uneligible connections to the pool
+      _availableConnections.addAll(uneligible);
     }
-    return null;
   }
 
   /// Creates a new connection.
-  Future<PooledConnection> _createConnection() async {
+  Future<PooledConnection> _createConnection([
+    List<BoltVersion>? forcedVersions,
+  ]) async {
     final boltConnection = BoltConnection(
       _uri,
       _auth,
@@ -279,11 +302,11 @@ class ConnectionPool {
     );
 
     try {
-      await boltConnection.connect();
+      await boltConnection.connect(forcedVersions);
       final pooledConnection = PooledConnection(boltConnection);
       _allConnections.add(pooledConnection);
       return pooledConnection;
-    } catch (e) {
+    } catch (_) {
       await boltConnection.close();
       rethrow;
     }

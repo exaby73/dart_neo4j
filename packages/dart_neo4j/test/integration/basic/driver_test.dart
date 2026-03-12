@@ -1,3 +1,4 @@
+import 'package:dart_bolt/dart_bolt.dart' show BoltVersion;
 import 'package:dart_neo4j/dart_neo4j.dart';
 import 'package:dart_neo4j/src/driver/uri_parser.dart';
 import 'package:test/test.dart';
@@ -69,6 +70,51 @@ void main() {
 
         await expectLater(driver.verifyConnectivity(), completes);
       });
+
+      test(
+        'verifies connectivity successfully (force version to 4.4)',
+        () async {
+          driver = Neo4jDriver.create(
+            TestConfig.boltUri,
+            auth: TestConfig.auth,
+          );
+
+          await expectLater(
+            driver.verifyConnectivity([BoltVersion(major: 4, minor: 4)]),
+            completes,
+          );
+        },
+      );
+
+      test(
+        'verifies connectivity successfully (force version to 5.0)',
+        () async {
+          driver = Neo4jDriver.create(
+            TestConfig.boltUri,
+            auth: TestConfig.auth,
+          );
+
+          await expectLater(
+            driver.verifyConnectivity([BoltVersion(major: 5, minor: 0)]),
+            completes,
+          );
+        },
+      );
+
+      test(
+        'verifies connectivity successfully (force version to 5.1)',
+        () async {
+          driver = Neo4jDriver.create(
+            TestConfig.boltUri,
+            auth: TestConfig.auth,
+          );
+
+          await expectLater(
+            driver.verifyConnectivity([BoltVersion.v5_1]),
+            completes,
+          );
+        },
+      );
 
       test('throws on connectivity failure with wrong port', () async {
         const config = DriverConfig(

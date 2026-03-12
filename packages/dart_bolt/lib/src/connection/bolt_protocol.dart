@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:dart_bolt/src/connection/bolt_socket.dart';
 import 'package:dart_bolt/src/connection/connection_exceptions.dart';
-import 'package:dart_packstream/dart_packstream.dart';
 import 'package:dart_bolt/src/messages/bolt_message.dart';
+import 'package:dart_packstream/dart_packstream.dart';
 
 /// Handles Bolt protocol operations including handshake, chunking, and message parsing.
 class BoltProtocol {
@@ -12,11 +12,11 @@ class BoltProtocol {
   static const int _maxChunkSize = 0xFFFF;
 
   /// Supported protocol versions in descending order of preference.
-  static const List<int> _supportedVersions = [
-    0x00000508, // Version 5.8
-    0x00000505, // Version 5.5
-    0x00000405, // Version 4.5
-    0x00000404, // Version 4.4
+  static const List<BoltVersion> _supportedVersions = [
+    BoltVersion(major: 5, minor: 8), // Version 5.8
+    BoltVersion(major: 5, minor: 5), // Version 5.5
+    BoltVersion(major: 4, minor: 5), // Version 4.5
+    BoltVersion(major: 4, minor: 4), // Version 4.4
   ];
 
   final BoltSocket _socket;
@@ -37,18 +37,20 @@ class BoltProtocol {
   /// Returns the agreed protocol version.
   /// Throws [ProtocolException] if version negotiation fails.
   /// Throws [ConnectionTimeoutException] if handshake times out.
-  Future<int> performHandshake() async {
+  Future<int> performHandshake([List<BoltVersion>? forcedVersions]) async {
     // Create handshake message
     final handshake = ByteData(20);
     handshake.setUint32(0, _magicPreamble, Endian.big);
 
+    final versions = forcedVersions ?? _supportedVersions;
+
     // Add supported versions
-    for (int i = 0; i < 4 && i < _supportedVersions.length; i++) {
-      handshake.setUint32(4 + (i * 4), _supportedVersions[i], Endian.big);
+    for (int i = 0; i < 4 && i < versions.length; i++) {
+      handshake.setUint32(4 + (i * 4), versions[i].rawVersion, Endian.big);
     }
 
     // Fill remaining slots with zeros if needed
-    for (int i = _supportedVersions.length; i < 4; i++) {
+    for (int i = versions.length; i < 4; i++) {
       handshake.setUint32(4 + (i * 4), 0, Endian.big);
     }
 
@@ -67,29 +69,30 @@ class BoltProtocol {
       }
     });
 
-    _agreedVersion = await versionCompleter.future.timeout(
-      const Duration(seconds: 10),
+    final timeout = const Duration(seconds: 10);
+    final version = _agreedVersion = await versionCompleter.future.timeout(
+      timeout,
       onTimeout: () => throw ConnectionTimeoutException(
         'Handshake timeout: server did not respond to version negotiation',
-        const Duration(seconds: 10),
+        timeout,
       ),
     );
 
-    if (_agreedVersion == 0) {
+    if (version == 0) {
       throw ProtocolException(
         'Server does not support any of the requested protocol versions',
-        _agreedVersion,
+        version,
       );
     }
 
-    if (!_supportedVersions.contains(_agreedVersion)) {
+    if (!versions.contains(BoltVersion.raw(version))) {
       throw ProtocolException(
         'Server negotiated an unexpected protocol version',
-        _agreedVersion,
+        version,
       );
     }
 
-    return _agreedVersion!;
+    return version;
   }
 
   /// Sends a Bolt message by chunking it according to the protocol.
@@ -224,4 +227,27 @@ class BoltProtocol {
     _partialData = null;
     _currentMessageData.clear();
   }
+}
+
+/// Bolt version based on big-endian representation
+extension type const BoltVersion.raw(int rawVersion) {
+  const BoltVersion({required int major, required int minor})
+    : this.raw((minor << 8) | major);
+
+  int get major => rawVersion & 0xFF;
+  int get minor => (rawVersion & 0xFF00) >> 8;
+
+  bool operator <(BoltVersion other) =>
+      (major < other.major) || (major == other.major && minor < other.minor);
+
+  bool operator <=(BoltVersion other) =>
+      (major < other.major) || (major == other.major && minor <= other.minor);
+
+  bool operator >(BoltVersion other) =>
+      (major > other.major) || (major == other.major && minor > other.minor);
+
+  bool operator >=(BoltVersion other) =>
+      (major > other.major) || (major == other.major && minor >= other.minor);
+
+  static const v5_1 = BoltVersion(major: 5, minor: 1);
 }

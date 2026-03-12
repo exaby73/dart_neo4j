@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dart_bolt/dart_bolt.dart' show BoltVersion;
 import 'package:dart_neo4j/src/auth/auth_token.dart';
 import 'package:dart_neo4j/src/connection/connection_pool.dart';
 import 'package:dart_neo4j/src/driver/uri_parser.dart';
@@ -102,7 +103,7 @@ abstract class Neo4jDriver {
   ///
   /// Throws [ServiceUnavailableException] if the server is not available.
   /// Throws [AuthenticationException] if authentication fails.
-  Future<void> verifyConnectivity();
+  Future<void> verifyConnectivity([List<BoltVersion>? forcedVersions]);
 
   /// Closes this driver and releases all associated resources.
   ///
@@ -153,14 +154,14 @@ class _Neo4jDriverImpl implements Neo4jDriver {
   }
 
   @override
-  Future<void> verifyConnectivity() async {
+  Future<void> verifyConnectivity([List<BoltVersion>? forcedVersions]) async {
     if (_isClosed) {
       throw const ServiceUnavailableException('Driver has been closed');
     }
 
     // Attempt to acquire and immediately release a connection
     try {
-      final connection = await _connectionPool.acquire();
+      final connection = await _connectionPool.acquire(forcedVersions);
       _connectionPool.release(connection);
     } catch (e) {
       // Let specific exceptions pass through, wrap others in ServiceUnavailableException
